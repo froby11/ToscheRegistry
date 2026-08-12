@@ -645,7 +645,61 @@ main {
 
 .claims-intro {
   color: var(--parchment-dim);
-  margin: 0 0 2.5rem;
+  margin: 0 0 2rem;
+}
+
+.map-wrap {
+  position: relative;
+  width: 100%;
+  margin-bottom: 3rem;
+  border: 1px solid var(--slate-hair);
+  border-radius: 4px;
+  overflow: hidden;
+  background: #000;
+}
+
+.map-image {
+  display: block;
+  width: 100%;
+  height: auto;
+}
+
+.map-overlay {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+}
+
+.claim-region {
+  fill: var(--gold);
+  fill-opacity: 0;
+  stroke: var(--gold);
+  stroke-opacity: 0;
+  stroke-width: 3;
+  cursor: pointer;
+  transition: fill-opacity 0.15s ease, stroke-opacity 0.15s ease;
+}
+
+.claim-region:hover,
+.claim-region:focus-visible {
+  fill-opacity: 0.28;
+  stroke-opacity: 0.85;
+  outline: none;
+}
+
+.map-tooltip {
+  position: absolute;
+  background: var(--ink-raised);
+  border: 1px solid var(--gold);
+  color: var(--parchment);
+  font-family: var(--font-mono);
+  font-size: 0.78rem;
+  padding: 0.35rem 0.7rem;
+  border-radius: 3px;
+  pointer-events: none;
+  white-space: nowrap;
+  z-index: 10;
 }
 
 .claims-columns {

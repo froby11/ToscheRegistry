@@ -364,6 +364,20 @@
       citizens = await res.json();
 
       ["citystate", "timezone", "citizenship", "other"].forEach(buildColumnHeader);
+
+      // Pre-apply a filter if arriving from a map region link, e.g. index.html?citystate=Crari
+      const params = new URLSearchParams(window.location.search);
+      const presetCitystate = params.get("citystate");
+      if (presetCitystate && filters.citystate) {
+        const match = optionsForColumn("citystate").find(
+          (opt) => opt.toLowerCase() === presetCitystate.toLowerCase()
+        );
+        if (match) {
+          filters.citystate.add(match);
+          buildColumnHeader("citystate"); // rebuild so the checkbox shows checked
+        }
+      }
+
       updateStats();
       applyFilters();
     } catch (err) {

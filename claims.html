@@ -22,7 +22,42 @@
 
 <main class="claims-main">
   <h1>Claims</h1>
-  <p class="claims-intro">The city-states of the Kingdom and the territories held within its borders.</p>
+  <p class="claims-intro">Hover a region to see its name. Click a city-state to view its citizens.</p>
+
+  <div class="map-wrap" id="map-wrap">
+    <img class="map-image" src="assets/island-map.png" alt="Map of the Kingdom of Tosche">
+    <svg class="map-overlay" viewBox="0 0 1183 1330" preserveAspectRatio="xMidYMid meet">
+      <polygon class="claim-region" data-region-id="region-1" points="
+        390,306 425,226 473,159 580,93 669,53 803,40 828,66 923,93 999,146
+        1073,120 1129,146 1076,226 1120,266 1042,359 1116,412 990,505 1063,538
+        929,624 900,558 828,598 793,637 733,585 674,637 627,584 566,611 520,545
+        461,504 502,459 391,385
+      "></polygon>
+
+      <polygon class="claim-region" data-region-id="region-2" points="
+        674,213 745,213 745,252 674,252
+      "></polygon>
+
+      <polygon class="claim-region" data-region-id="region-3" points="
+        24,690 35,770 95,810 130,877 106,943 165,970 225,1003 355,1099
+        355,1234 532,1234 592,1195 555,1141 604,1035 592,904 580,850
+        508,850 449,743 391,584 343,584 284,504 213,478 178,531 178,610 106,637
+      "></polygon>
+
+      <polygon class="claim-region" data-region-id="region-4" points="
+        508,717 555,770 580,850 592,904 604,1035 555,1141 592,1195 651,1116
+        686,1195 733,1116 710,1037 757,983 710,930 757,824 710,770 663,717
+        592,690
+      "></polygon>
+
+      <polygon class="claim-region" data-region-id="region-5" points="
+        710,770 757,824 710,930 757,983 710,1037 733,1116 769,1170 828,1143
+        887,1116 946,1037 1063,984 1053,930 1099,877 1042,824 981,770
+        923,717 887,664 793,637 733,585 674,637 627,584
+      "></polygon>
+    </svg>
+    <div class="map-tooltip" id="map-tooltip" hidden></div>
+  </div>
 
   <div class="claims-columns">
     <section class="claims-block">
@@ -46,6 +81,8 @@
     </section>
   </div>
 </main>
+
+<script src="claims.js"></script>
 
 <footer>
   <p>The Tosche Registry &middot; maintained by decree of the Crown</p>
