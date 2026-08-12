@@ -45,12 +45,24 @@ a { color: var(--gold); }
 /* ---------------------------------------------------------------- */
 
 .masthead {
+  position: relative;
   border-bottom: 1px solid var(--slate-hair);
   padding: 4.5rem 1.5rem 3rem;
   background:
     radial-gradient(ellipse 900px 400px at 50% -10%, var(--gold-soft), transparent 70%),
     var(--ink);
   text-align: center;
+}
+
+.credit {
+  position: absolute;
+  top: 1.25rem;
+  right: 1.5rem;
+  font-family: var(--font-mono);
+  font-size: 0.72rem;
+  letter-spacing: 0.06em;
+  color: var(--parchment-dim);
+  margin: 0;
 }
 
 .masthead-inner { max-width: 44rem; margin: 0 auto; }
@@ -262,6 +274,10 @@ main {
   justify-content: center;
   padding: 1.5rem;
   z-index: 50;
+}
+
+.detail-overlay[hidden] {
+  display: none;
 }
 
 .detail-panel {
