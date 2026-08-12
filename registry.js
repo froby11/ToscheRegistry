@@ -1,6 +1,3 @@
-// Shared across all registry pages. Each page sets window.TOSCHE_PAGE before
-// including this file to control which filter set and layout it uses.
-
 (function () {
   "use strict";
 
@@ -13,38 +10,54 @@
     return /timezone/i.test(name);
   }
 
-  function isCitizenshipRole(name) {
-    const lowered = name.toLowerCase();
-    return lowered.includes("trial citizen") || lowered.includes("citizen");
+  function isFactionRole(name) {
+    return FACTIONS.some((f) => name.toLowerCase().includes(f.toLowerCase()));
   }
 
-  function isFactionRole(name, faction) {
-    return name.toLowerCase().includes(faction.toLowerCase());
+  function citizenshipValue(name) {
+    const lowered = name.toLowerCase();
+    if (lowered.includes("trial citizen")) return "Trial Citizen";
+    if (lowered.includes("citizen")) return "Citizen";
+    return null;
+  }
+
+  function isCitizenshipRole(name) {
+    return citizenshipValue(name) !== null;
   }
 
   function isOtherRole(name) {
-    return (
-      !isTimezoneRole(name) &&
-      !isCitizenshipRole(name) &&
-      !FACTIONS.some((f) => isFactionRole(name, f))
-    );
+    return !isTimezoneRole(name) && !isFactionRole(name) && !isCitizenshipRole(name);
+  }
+
+  // Split a citizen's roles into the four registry categories.
+  function categorize(rolesArr) {
+    const roles = rolesArr || [];
+    return {
+      citystate: roles.filter((r) => isFactionRole(r.name)),
+      timezone: roles.filter((r) => isTimezoneRole(r.name)),
+      citizenship: roles.filter((r) => isCitizenshipRole(r.name)),
+      other: roles.filter((r) => isOtherRole(r.name)),
+    };
   }
 
   const els = {
     body: document.getElementById("ledger-body"),
     status: document.getElementById("registry-status"),
     search: document.getElementById("search-input"),
-    filterBar: document.getElementById("filter-bar"),
     statTotal: document.getElementById("stat-total"),
     statRanked: document.getElementById("stat-ranked"),
     statUpdated: document.getElementById("stat-updated"),
-    overlay: document.getElementById("detail-overlay"),
-    content: document.getElementById("detail-content"),
-    close: document.getElementById("detail-close"),
   };
 
   let citizens = [];
-  let activeFilter = null; // null = show all
+
+  // Per-column filter state: Set of accepted values, or null meaning "everything, no filter yet built"
+  const filters = {
+    citystate: null,
+    timezone: null,
+    citizenship: null,
+    other: null,
+  };
 
   function showStatus(message, isError) {
     if (!els.status) return;
@@ -64,9 +77,7 @@
   }
 
   function portraitUrl(citizen) {
-    if (citizen.ign) {
-      return `https://mc-heads.net/avatar/${encodeURIComponent(citizen.ign)}/64`;
-    }
+    if (citizen.ign) return `https://mc-heads.net/avatar/${encodeURIComponent(citizen.ign)}/64`;
     return null;
   }
 
@@ -87,13 +98,12 @@
   function renderBadge(role) {
     const bg = role.color || "#3a4250";
     const fg = textColorFor(role.color);
-    return `<span class="badge" style="background:${bg};color:${fg};border-color:${bg}">${escapeHtml(
+    return `<span class="badge" style="background:${bg}4d;color:${fg};border-color:${bg}99">${escapeHtml(
       role.name
     )}</span>`;
   }
 
-  function renderBadges(rolesArr, predicate) {
-    const list = predicate ? rolesArr.filter((r) => predicate(r.name)) : rolesArr;
+  function renderCell(list) {
     if (!list.length) return `<span class="no-role">&mdash;</span>`;
     return `<div class="badge-row">${list.map(renderBadge).join("")}</div>`;
   }
@@ -106,99 +116,155 @@
     return `<div class="portrait portrait-placeholder" title="No IGN on file"></div>`;
   }
 
-  function citizenMatchesFilter(citizen) {
-    if (!activeFilter) return true;
-    const names = (citizen.roles || []).map((r) => r.name);
-    if (activeFilter.type === "faction") return names.some((n) => isFactionRole(n, activeFilter.value));
-    if (activeFilter.type === "timezone") return names.some(isTimezoneRole);
-    if (activeFilter.type === "citizenship") return names.some(isCitizenshipRole);
-    if (activeFilter.type === "other") return names.some(isOtherRole);
+  // ------------------------------------------------------------------
+  // Column dropdown filters
+  // ------------------------------------------------------------------
+
+  function optionsForColumn(key) {
+    if (key === "citystate") return FACTIONS.slice();
+    if (key === "citizenship") return ["Trial Citizen", "Citizen"];
+
+    if (key === "other") {
+      const set = new Set();
+      citizens.forEach((c) => categorize(c.roles).other.forEach((r) => set.add(r.name)));
+      return Array.from(set).sort();
+    }
+
+    if (key === "timezone") {
+      const tzSet = new Set();
+      citizens.forEach((c) => categorize(c.roles).timezone.forEach((r) => tzSet.add(r.name)));
+      return Array.from(tzSet).sort();
+    }
+    return [];
+  }
+
+  function valuesForCitizenColumn(citizen, key) {
+    const cat = categorize(citizen.roles);
+    if (key === "citystate") return cat.citystate.map((r) => r.name);
+    if (key === "timezone") return cat.timezone.map((r) => r.name);
+    if (key === "other") return cat.other.map((r) => r.name);
+    if (key === "citizenship") return cat.citizenship.map((r) => citizenshipValue(r.name));
+    return [];
+  }
+
+  const COLUMN_LABELS = {
+    citystate: "City-State",
+    timezone: "Timezone",
+    citizenship: "Citizenship Status",
+    other: "Other Roles",
+  };
+
+  function buildColumnHeader(key) {
+    const th = document.querySelector(`th[data-column="${key}"]`);
+    if (!th) return;
+
+    const options = optionsForColumn(key);
+    if (filters[key] === null) {
+      filters[key] = new Set(options); // everything on by default
+    }
+
+    const wrap = document.createElement("div");
+    wrap.className = "col-dropdown";
+
+    const btn = document.createElement("button");
+    btn.className = "col-dropdown-btn";
+    btn.type = "button";
+    btn.innerHTML = `${escapeHtml(COLUMN_LABELS[key])} <span class="caret">&#9662;</span>`;
+
+    const menu = document.createElement("div");
+    menu.className = "col-dropdown-menu";
+    menu.hidden = true;
+
+    if (options.length === 0) {
+      menu.innerHTML = `<p class="dropdown-empty">No roles in this category.</p>`;
+    } else {
+      options.forEach((opt) => {
+        const id = `filter-${key}-${opt.replace(/\W+/g, "-")}`;
+        const row = document.createElement("label");
+        row.className = "dropdown-option";
+        row.innerHTML = `
+          <input type="checkbox" id="${id}" ${filters[key].has(opt) ? "checked" : ""}>
+          <span>${escapeHtml(opt)}</span>
+        `;
+        row.querySelector("input").addEventListener("change", (e) => {
+          if (e.target.checked) filters[key].add(opt);
+          else filters[key].delete(opt);
+          applyFilters();
+        });
+        menu.appendChild(row);
+      });
+    }
+
+    btn.addEventListener("click", (e) => {
+      e.stopPropagation();
+      document.querySelectorAll(".col-dropdown-menu").forEach((m) => {
+        if (m !== menu) m.hidden = true;
+      });
+      menu.hidden = !menu.hidden;
+    });
+
+    wrap.appendChild(btn);
+    wrap.appendChild(menu);
+    th.innerHTML = "";
+    th.appendChild(wrap);
+  }
+
+  document.addEventListener("click", () => {
+    document.querySelectorAll(".col-dropdown-menu").forEach((m) => (m.hidden = true));
+  });
+
+  function citizenPassesFilters(citizen) {
+    for (const key of Object.keys(filters)) {
+      const values = valuesForCitizenColumn(citizen, key);
+      if (values.length === 0) continue; // nothing in this category, don't filter them out
+      const allowed = filters[key];
+      if (!values.some((v) => allowed.has(v))) return false;
+    }
     return true;
   }
 
-  function badgePredicateForPage() {
-    const page = window.TOSCHE_PAGE;
-    if (page === "timezones") return isTimezoneRole;
-    if (page === "citizenship") return isCitizenshipRole;
-    if (page === "other") return isOtherRole;
-    return null; // citizens page shows all roles
-  }
+  // ------------------------------------------------------------------
+  // Rendering
+  // ------------------------------------------------------------------
 
   function renderTable(list) {
     if (!els.body) return;
     if (list.length === 0) {
       els.body.innerHTML = "";
-      showStatus("No citizens match this view.");
+      showStatus("No citizens match your filters.");
       return;
     }
     hideStatus();
-    const predicate = badgePredicateForPage();
 
     els.body.innerHTML = list
       .map((c) => {
+        const cat = categorize(c.roles);
         return `
-        <tr tabindex="0" data-discord-id="${c.discord_id}">
+        <tr>
           <td class="col-portrait">${portraitCell(c)}</td>
           <td class="col-name">
-            <span class="citizen-name">${escapeHtml(displayName(c))}</span>
-            <span class="citizen-discord">${escapeHtml(c.discord_username || "")}</span>
+            <a class="citizen-link" href="citizen.html?id=${encodeURIComponent(c.discord_id)}">
+              <span class="citizen-name">${escapeHtml(displayName(c))}</span>
+              <span class="citizen-discord">${c.discord_username ? "@" + escapeHtml(c.discord_username) : ""}</span>
+            </a>
           </td>
-          <td class="col-station">${renderBadges(c.roles || [], predicate)}</td>
+          <td class="col-filterable">${renderCell(cat.citystate)}</td>
+          <td class="col-filterable">${renderCell(cat.timezone)}</td>
+          <td class="col-filterable">${renderCell(cat.citizenship)}</td>
+          <td class="col-filterable">${renderCell(cat.other)}</td>
           <td class="col-recruiter">${c.recruited_by ? escapeHtml(c.recruited_by) : "&mdash;"}</td>
         </tr>`;
       })
       .join("");
-
-    els.body.querySelectorAll("tr").forEach((row) => {
-      row.addEventListener("click", () => openDetail(row.dataset.discordId));
-      row.addEventListener("keydown", (e) => {
-        if (e.key === "Enter" || e.key === " ") {
-          e.preventDefault();
-          openDetail(row.dataset.discordId);
-        }
-      });
-    });
   }
 
   function applyFilters() {
     const query = (els.search && els.search.value.trim().toLowerCase()) || "";
     const filtered = citizens.filter((c) => {
       const name = displayName(c).toLowerCase();
-      return (!query || name.includes(query)) && citizenMatchesFilter(c);
+      return (!query || name.includes(query)) && citizenPassesFilters(c);
     });
     renderTable(filtered);
-  }
-
-  function buildFilterBar() {
-    if (!els.filterBar) return;
-    const page = window.TOSCHE_PAGE;
-    let buttons = [];
-
-    if (page === "citizens") {
-      buttons = FACTIONS.map((f) => ({ label: f, filter: { type: "faction", value: f } }));
-    } else if (page === "timezones") {
-      buttons = [{ label: "All timezones", filter: { type: "timezone" } }];
-    } else if (page === "citizenship") {
-      buttons = [{ label: "All citizenship", filter: { type: "citizenship" } }];
-    } else if (page === "other") {
-      buttons = [{ label: "All other roles", filter: { type: "other" } }];
-    }
-
-    const allBtn = `<button class="filter-btn active" data-index="all">All citizens</button>`;
-    const rest = buttons
-      .map((b, i) => `<button class="filter-btn" data-index="${i}">${escapeHtml(b.label)}</button>`)
-      .join("");
-    els.filterBar.innerHTML = allBtn + rest;
-
-    els.filterBar.querySelectorAll(".filter-btn").forEach((btn) => {
-      btn.addEventListener("click", () => {
-        els.filterBar.querySelectorAll(".filter-btn").forEach((b) => b.classList.remove("active"));
-        btn.classList.add("active");
-        const idx = btn.dataset.index;
-        activeFilter = idx === "all" ? null : buttons[Number(idx)].filter;
-        applyFilters();
-      });
-    });
   }
 
   function updateStats() {
@@ -228,114 +294,6 @@
     return `${diffDays}d ago`;
   }
 
-  async function openDetail(discordId) {
-    if (!els.overlay) return;
-    const citizen = citizens.find((c) => String(c.discord_id) === String(discordId));
-    if (!citizen) return;
-
-    els.content.innerHTML = renderDetailSkeleton(citizen);
-    els.overlay.hidden = false;
-    els.close.focus();
-
-    try {
-      const res = await fetch(
-        `${API_BASE}/api/citizens/${encodeURIComponent(discordId)}?guild_id=${encodeURIComponent(GUILD_ID)}`
-      );
-      if (!res.ok) throw new Error(`API returned ${res.status}`);
-      const full = await res.json();
-      renderActivitySection(full.activity || []);
-    } catch (err) {
-      const section = document.getElementById("activity-section");
-      if (section) section.innerHTML = `<p class="detail-empty">Could not load activity history.</p>`;
-      console.error(err);
-    }
-  }
-
-  function renderDetailSkeleton(citizen) {
-    const roleList = citizen.roles || [];
-    const portrait = portraitUrl(citizen);
-    return `
-      <div class="detail-header">
-        ${
-          portrait
-            ? `<img class="detail-portrait" src="${portrait}" alt="">`
-            : `<div class="detail-portrait portrait-placeholder"></div>`
-        }
-        <div>
-          <h2 id="detail-name">${escapeHtml(displayName(citizen))}</h2>
-          <p class="detail-sub">${escapeHtml(citizen.discord_username || "")}${
-            citizen.timezone ? " &middot; " + escapeHtml(citizen.timezone) : ""
-          }</p>
-        </div>
-      </div>
-
-      <div class="detail-section">
-        <h3>Station</h3>
-        ${roleList.length ? renderBadges(roleList) : `<p class="detail-empty">Holds no tracked office.</p>`}
-      </div>
-
-      <div class="detail-section">
-        <h3>Recruitment</h3>
-        ${
-          citizen.recruited_by
-            ? `<p>Recruited by <strong>${escapeHtml(citizen.recruited_by)}</strong>${
-                citizen.recruited_at ? ` on ${escapeHtml(citizen.recruited_at.slice(0, 10))}` : ""
-              }</p>`
-            : `<p class="detail-empty">No recruiter on record.</p>`
-        }
-      </div>
-
-      <div class="detail-section" id="activity-section">
-        <h3>Activity, last 30 days</h3>
-        <p class="detail-empty">Loading&hellip;</p>
-      </div>
-    `;
-  }
-
-  function renderActivitySection(activity) {
-    const section = document.getElementById("activity-section");
-    if (!section) return;
-
-    if (!activity.length) {
-      section.innerHTML = `<h3>Activity, last 30 days</h3><p class="detail-empty">No activity recorded yet.</p>`;
-      return;
-    }
-
-    const width = 480;
-    const height = 140;
-    const padding = 12;
-    const max = Math.max(...activity.map((a) => a.playtime_minutes || 0), 1);
-
-    const points = activity.map((a, i) => {
-      const x = padding + (i / Math.max(activity.length - 1, 1)) * (width - padding * 2);
-      const y = height - padding - ((a.playtime_minutes || 0) / max) * (height - padding * 2);
-      return `${x},${y}`;
-    });
-
-    section.innerHTML = `
-      <h3>Activity, last 30 days</h3>
-      <svg id="activity-chart" viewBox="0 0 ${width} ${height}" preserveAspectRatio="none">
-        <polyline points="${points.join(" ")}" fill="none" stroke="#c9a227" stroke-width="2" />
-        ${points
-          .map((p) => `<circle cx="${p.split(",")[0]}" cy="${p.split(",")[1]}" r="2.5" fill="#c9a227" />`)
-          .join("")}
-      </svg>
-    `;
-  }
-
-  function closeDetail() {
-    if (els.overlay) els.overlay.hidden = true;
-  }
-
-  if (els.close) els.close.addEventListener("click", closeDetail);
-  if (els.overlay) {
-    els.overlay.addEventListener("click", (e) => {
-      if (e.target === els.overlay) closeDetail();
-    });
-  }
-  document.addEventListener("keydown", (e) => {
-    if (e.key === "Escape" && els.overlay && !els.overlay.hidden) closeDetail();
-  });
   if (els.search) els.search.addEventListener("input", applyFilters);
 
   async function init() {
@@ -351,7 +309,7 @@
       if (!res.ok) throw new Error(`Citizens API returned ${res.status}`);
       citizens = await res.json();
 
-      buildFilterBar();
+      ["citystate", "timezone", "citizenship", "other"].forEach(buildColumnHeader);
       updateStats();
       applyFilters();
     } catch (err) {
