@@ -45,6 +45,7 @@
     status: document.getElementById("registry-status"),
     search: document.getElementById("search-input"),
     statTotal: document.getElementById("stat-total"),
+    statShown: document.getElementById("stat-shown"),
     statUpdated: document.getElementById("stat-updated"),
     pagination: document.getElementById("pagination"),
   };
@@ -213,6 +214,14 @@
   // Rendering
   // ------------------------------------------------------------------
 
+  function formatMinutes(minutes) {
+    if (!minutes) return "&mdash;";
+    const h = Math.floor(minutes / 60);
+    const m = minutes % 60;
+    if (h === 0) return `${m}m`;
+    return `${h}h ${m}m`;
+  }
+
   function renderTable(list) {
     if (!els.body) return;
     if (list.length === 0) {
@@ -244,6 +253,7 @@
           <td class="col-filterable">${renderCell(cat.timezone)}</td>
           <td class="col-filterable">${renderCell(cat.citizenship)}</td>
           <td class="col-filterable">${renderCell(cat.other)}</td>
+          <td class="col-activity">${formatMinutes(c.activity_30d_minutes)}</td>
           <td class="col-address">${c.address ? escapeHtml(c.address) : "&mdash;"}</td>
           <td class="col-recruiter">${c.recruited_by ? escapeHtml(c.recruited_by) : "&mdash;"}</td>
         </tr>`;
@@ -277,6 +287,7 @@
       const name = displayName(c).toLowerCase();
       return (!query || name.includes(query)) && citizenPassesFilters(c);
     });
+    if (els.statShown) els.statShown.textContent = filtered.length;
     renderTable(filtered);
   }
 
