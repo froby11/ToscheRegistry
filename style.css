@@ -672,21 +672,30 @@ main {
 }
 
 .claim-region {
-  fill: var(--gold);
-  fill-opacity: 0;
-  stroke: var(--gold);
-  stroke-opacity: 0;
+  fill-opacity: 0.24;
   stroke-width: 3;
+  stroke-opacity: 0.55;
   cursor: pointer;
-  transition: fill-opacity 0.15s ease, stroke-opacity 0.15s ease;
+  transform-box: fill-box;
+  transform-origin: center;
+  transition: fill-opacity 0.18s ease, stroke-opacity 0.18s ease, filter 0.18s ease, transform 0.18s ease;
 }
 
 .claim-region:hover,
 .claim-region:focus-visible {
-  fill-opacity: 0.28;
-  stroke-opacity: 0.85;
+  fill-opacity: 0.5;
+  stroke-opacity: 0.95;
+  filter: brightness(1.4) drop-shadow(0 8px 14px rgba(0, 0, 0, 0.6));
+  transform: scale(1.015);
   outline: none;
 }
+
+.claim-region[data-region-id="region-3-west"] { fill: #e0393e; stroke: #e0393e; }
+.claim-region[data-region-id="region-1-north"] { fill: #38d6d6; stroke: #38d6d6; }
+.claim-region[data-region-id="region-5-east"] { fill: #3ecf5c; stroke: #3ecf5c; }
+.claim-region[data-region-id="region-6-obelisk"] { fill: #a259e6; stroke: #a259e6; }
+.claim-region[data-region-id="region-4-southcenter"] { fill: #e6893a; stroke: #e6893a; }
+.claim-region[data-region-id="region-2-outpost"] { fill: var(--gold); stroke: var(--gold); }
 
 .map-tooltip {
   position: absolute;
