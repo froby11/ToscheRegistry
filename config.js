@@ -4,5 +4,5 @@ const TOSCHE_CONFIG = {
   API_BASE: "https://toschan-registry-bot-production.up.railway.app",
 
   // Right-click your Discord server icon (Developer Mode must be on) -> Copy Server ID
-  GUILD_ID: "YOUR_GUILD_ID_HERE",
+  GUILD_ID: "1444084591290880035",
 };
