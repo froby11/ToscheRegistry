@@ -44,6 +44,8 @@
     body: document.getElementById("ledger-body"),
     status: document.getElementById("registry-status"),
     search: document.getElementById("search-input"),
+    sortSelect: document.getElementById("sort-select"),
+    sortDirBtn: document.getElementById("sort-direction"),
     statTotal: document.getElementById("stat-total"),
     statShown: document.getElementById("stat-shown"),
     statUpdated: document.getElementById("stat-updated"),
@@ -53,6 +55,8 @@
   let citizens = [];
   let currentPage = 1;
   const PAGE_SIZE = 25;
+  let sortKey = "name";
+  let sortAsc = true;
 
   // Per-column filter state: Set of accepted values, or null meaning "everything, no filter yet built"
   const filters = {
@@ -280,6 +284,22 @@
     if (nextBtn) nextBtn.addEventListener("click", () => { currentPage++; applyFilters(false); });
   }
 
+  function sortCitizens(list) {
+    const sorted = list.slice();
+    sorted.sort((a, b) => {
+      let cmp = 0;
+      if (sortKey === "name") {
+        cmp = displayName(a).toLowerCase().localeCompare(displayName(b).toLowerCase());
+      } else if (sortKey === "activity") {
+        cmp = (a.activity_30d_minutes || 0) - (b.activity_30d_minutes || 0);
+      } else if (sortKey === "updated") {
+        cmp = (a.updated_at || "").localeCompare(b.updated_at || "");
+      }
+      return sortAsc ? cmp : -cmp;
+    });
+    return sorted;
+  }
+
   function applyFilters(resetPage) {
     if (resetPage !== false) currentPage = 1;
     const query = (els.search && els.search.value.trim().toLowerCase()) || "";
@@ -287,8 +307,9 @@
       const name = displayName(c).toLowerCase();
       return (!query || name.includes(query)) && citizenPassesFilters(c);
     });
-    if (els.statShown) els.statShown.textContent = filtered.length;
-    renderTable(filtered);
+    const sorted = sortCitizens(filtered);
+    if (els.statShown) els.statShown.textContent = sorted.length;
+    renderTable(sorted);
   }
 
   function updateStats() {
@@ -315,6 +336,19 @@
   }
 
   if (els.search) els.search.addEventListener("input", applyFilters);
+  if (els.sortSelect) {
+    els.sortSelect.addEventListener("change", (e) => {
+      sortKey = e.target.value;
+      applyFilters(false);
+    });
+  }
+  if (els.sortDirBtn) {
+    els.sortDirBtn.addEventListener("click", () => {
+      sortAsc = !sortAsc;
+      els.sortDirBtn.innerHTML = sortAsc ? "&#9650;" : "&#9660;";
+      applyFilters(false);
+    });
+  }
 
   async function init() {
     if (!GUILD_ID || GUILD_ID === "YOUR_GUILD_ID_HERE") {
