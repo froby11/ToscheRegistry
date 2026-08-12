@@ -4,7 +4,7 @@
   const API_BASE = TOSCHE_CONFIG.API_BASE.replace(/\/$/, "");
   const GUILD_ID = TOSCHE_CONFIG.GUILD_ID;
 
-  const FACTIONS = ["Floodkeep", "Arkanos", "Crari", "Pichia", "Arkavion"];
+  const FACTIONS = ["Pichia", "Arkanos", "Crari", "Arkavion", "Floodkeep"];
 
   function isTimezoneRole(name) {
     return /timezone/i.test(name);
@@ -195,8 +195,9 @@
       });
     }
 
-    btn.addEventListener("click", (e) => {
-      e.stopPropagation();
+    wrap.addEventListener("click", (e) => e.stopPropagation());
+
+    btn.addEventListener("click", () => {
       document.querySelectorAll(".col-dropdown-menu").forEach((m) => {
         if (m !== menu) m.hidden = true;
       });

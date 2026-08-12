@@ -41,8 +41,46 @@ a { color: var(--gold); }
 }
 
 /* ---------------------------------------------------------------- */
-/* Masthead                                                           */
+/* Topbar                                                              */
 /* ---------------------------------------------------------------- */
+
+.topbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 1.1rem 1.75rem;
+  border-bottom: 1px solid var(--slate-hair);
+  background: var(--ink);
+}
+
+.topbar-logo {
+  font-family: var(--font-display);
+  font-weight: 700;
+  font-size: 1.4rem;
+  color: var(--parchment);
+  letter-spacing: 0.01em;
+}
+
+.topbar-nav {
+  display: flex;
+  gap: 0.4rem;
+}
+
+.topbar-nav a {
+  font-family: var(--font-mono);
+  font-size: 0.78rem;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  color: var(--parchment-dim);
+  text-decoration: none;
+  padding: 0.5rem 1.1rem;
+  border-radius: 3px;
+  transition: color 0.15s ease, background 0.15s ease;
+}
+
+.topbar-nav a:hover { color: var(--parchment); background: var(--ink-raised); }
+
+.topbar-nav a.active { color: var(--gold); background: var(--gold-soft); }
 
 .masthead {
   position: relative;
@@ -512,6 +550,21 @@ main {
   max-width: 40rem;
   margin: 0 auto;
   padding: 3rem 1.5rem 5rem;
+}
+
+.back-link-row { margin-bottom: 1.5rem; }
+
+.placeholder-main {
+  max-width: 40rem;
+  margin: 0 auto;
+  padding: 4rem 1.5rem;
+  text-align: center;
+}
+
+.placeholder-main h1 {
+  font-family: var(--font-display);
+  font-size: 2.25rem;
+  margin: 0 0 0.75rem;
 }
 
 .citizen-profile-header {
