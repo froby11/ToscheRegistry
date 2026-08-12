@@ -45,11 +45,13 @@
     status: document.getElementById("registry-status"),
     search: document.getElementById("search-input"),
     statTotal: document.getElementById("stat-total"),
-    statRanked: document.getElementById("stat-ranked"),
     statUpdated: document.getElementById("stat-updated"),
+    pagination: document.getElementById("pagination"),
   };
 
   let citizens = [];
+  let currentPage = 1;
+  const PAGE_SIZE = 25;
 
   // Per-column filter state: Set of accepted values, or null meaning "everything, no filter yet built"
   const filters = {
@@ -121,30 +123,13 @@
   // ------------------------------------------------------------------
 
   function optionsForColumn(key) {
-    if (key === "citystate") return FACTIONS.slice();
-    if (key === "citizenship") return ["Trial Citizen", "Citizen"];
-
-    if (key === "other") {
-      const set = new Set();
-      citizens.forEach((c) => categorize(c.roles).other.forEach((r) => set.add(r.name)));
-      return Array.from(set).sort();
-    }
-
-    if (key === "timezone") {
-      const tzSet = new Set();
-      citizens.forEach((c) => categorize(c.roles).timezone.forEach((r) => tzSet.add(r.name)));
-      return Array.from(tzSet).sort();
-    }
-    return [];
+    const set = new Set();
+    citizens.forEach((c) => categorize(c.roles)[key].forEach((r) => set.add(r.name)));
+    return Array.from(set).sort();
   }
 
   function valuesForCitizenColumn(citizen, key) {
-    const cat = categorize(citizen.roles);
-    if (key === "citystate") return cat.citystate.map((r) => r.name);
-    if (key === "timezone") return cat.timezone.map((r) => r.name);
-    if (key === "other") return cat.other.map((r) => r.name);
-    if (key === "citizenship") return cat.citizenship.map((r) => citizenshipValue(r.name));
-    return [];
+    return categorize(citizen.roles)[key].map((r) => r.name);
   }
 
   const COLUMN_LABELS = {
@@ -160,7 +145,7 @@
 
     const options = optionsForColumn(key);
     if (filters[key] === null) {
-      filters[key] = new Set(options); // everything on by default
+      filters[key] = new Set(); // opt-in: nothing selected = no restriction on this column
     }
 
     const wrap = document.createElement("div");
@@ -216,9 +201,9 @@
 
   function citizenPassesFilters(citizen) {
     for (const key of Object.keys(filters)) {
-      const values = valuesForCitizenColumn(citizen, key);
-      if (values.length === 0) continue; // nothing in this category, don't filter them out
       const allowed = filters[key];
+      if (!allowed || allowed.size === 0) continue; // nothing selected, no restriction
+      const values = valuesForCitizenColumn(citizen, key);
       if (!values.some((v) => allowed.has(v))) return false;
     }
     return true;
@@ -232,12 +217,18 @@
     if (!els.body) return;
     if (list.length === 0) {
       els.body.innerHTML = "";
+      if (els.pagination) els.pagination.innerHTML = "";
       showStatus("No citizens match your filters.");
       return;
     }
     hideStatus();
 
-    els.body.innerHTML = list
+    const totalPages = Math.max(1, Math.ceil(list.length / PAGE_SIZE));
+    if (currentPage > totalPages) currentPage = totalPages;
+    const start = (currentPage - 1) * PAGE_SIZE;
+    const pageItems = list.slice(start, start + PAGE_SIZE);
+
+    els.body.innerHTML = pageItems
       .map((c) => {
         const cat = categorize(c.roles);
         return `
@@ -253,13 +244,34 @@
           <td class="col-filterable">${renderCell(cat.timezone)}</td>
           <td class="col-filterable">${renderCell(cat.citizenship)}</td>
           <td class="col-filterable">${renderCell(cat.other)}</td>
+          <td class="col-address">${c.address ? escapeHtml(c.address) : "&mdash;"}</td>
           <td class="col-recruiter">${c.recruited_by ? escapeHtml(c.recruited_by) : "&mdash;"}</td>
         </tr>`;
       })
       .join("");
+
+    renderPagination(totalPages);
   }
 
-  function applyFilters() {
+  function renderPagination(totalPages) {
+    if (!els.pagination) return;
+    if (totalPages <= 1) {
+      els.pagination.innerHTML = "";
+      return;
+    }
+    els.pagination.innerHTML = `
+      <button id="page-prev" ${currentPage === 1 ? "disabled" : ""}>&larr; Previous</button>
+      <button id="page-next" ${currentPage === totalPages ? "disabled" : ""}>Next &rarr;</button>
+      <span class="page-indicator">Page ${currentPage} of ${totalPages}</span>
+    `;
+    const prevBtn = document.getElementById("page-prev");
+    const nextBtn = document.getElementById("page-next");
+    if (prevBtn) prevBtn.addEventListener("click", () => { currentPage--; applyFilters(false); });
+    if (nextBtn) nextBtn.addEventListener("click", () => { currentPage++; applyFilters(false); });
+  }
+
+  function applyFilters(resetPage) {
+    if (resetPage !== false) currentPage = 1;
     const query = (els.search && els.search.value.trim().toLowerCase()) || "";
     const filtered = citizens.filter((c) => {
       const name = displayName(c).toLowerCase();
@@ -270,10 +282,6 @@
 
   function updateStats() {
     if (els.statTotal) els.statTotal.textContent = citizens.length;
-    if (els.statRanked) {
-      const ranked = citizens.filter((c) => (c.roles || []).length > 0).length;
-      els.statRanked.textContent = ranked;
-    }
     if (els.statUpdated) {
       const latest = citizens.reduce((max, c) => {
         if (!c.updated_at) return max;

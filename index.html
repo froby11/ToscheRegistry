@@ -25,6 +25,9 @@
     <div class="search-wrap">
       <input type="text" id="search-input" placeholder="Search by name..." autocomplete="off">
     </div>
+    <div class="toolbar-stats" aria-live="polite">
+      <span id="stat-total">&mdash;</span> citizens tracked &middot; updated <span id="stat-updated">&mdash;</span>
+    </div>
   </div>
 
   <div id="registry-status" class="registry-status" hidden></div>
@@ -38,11 +41,14 @@
         <th class="col-filterable" data-column="timezone"></th>
         <th class="col-filterable" data-column="citizenship"></th>
         <th class="col-filterable" data-column="other"></th>
+        <th class="col-address">Address</th>
         <th class="col-recruiter">Recruited by</th>
       </tr>
     </thead>
     <tbody id="ledger-body"></tbody>
   </table>
+
+  <div class="pagination" id="pagination"></div>
 </main>
 
 <footer>

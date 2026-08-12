@@ -110,6 +110,11 @@
         </div>
 
         <div class="detail-section">
+          <h3>Address</h3>
+          ${citizen.address ? `<p>${escapeHtml(citizen.address)}</p>` : `<p class="detail-empty">No address on record.</p>`}
+        </div>
+
+        <div class="detail-section">
           <h3>Recruitment</h3>
           ${
             citizen.recruited_by

@@ -47,7 +47,7 @@ a { color: var(--gold); }
 .topbar {
   display: flex;
   align-items: center;
-  justify-content: space-between;
+  gap: 2rem;
   padding: 1.1rem 1.75rem;
   border-bottom: 1px solid var(--slate-hair);
   background: var(--ink);
@@ -228,6 +228,15 @@ main {
   margin-bottom: 1.25rem;
 }
 
+.toolbar-stats {
+  font-family: var(--font-mono);
+  font-size: 0.8rem;
+  color: var(--parchment-dim);
+  white-space: nowrap;
+}
+
+.toolbar-stats span { color: var(--gold); }
+
 .search-wrap { flex: 1 1 16rem; max-width: 22rem; }
 
 #search-input {
@@ -358,9 +367,10 @@ main {
 }
 
 .col-portrait { width: 3rem; }
-.col-name { width: 16rem; }
+.col-name { width: 15rem; }
 .col-station { width: auto; }
-.col-recruiter { width: 12rem; }
+.col-address { width: 10rem; color: var(--parchment-dim); font-family: var(--font-mono); font-size: 0.8rem; }
+.col-recruiter { width: 10rem; }
 
 .portrait {
   width: 32px;
@@ -593,6 +603,41 @@ main {
   font-family: var(--font-display);
   font-size: 2.5rem;
   margin: 0 0 0.25rem;
+}
+
+/* ---------------------------------------------------------------- */
+/* Pagination                                                          */
+/* ---------------------------------------------------------------- */
+
+.pagination {
+  display: flex;
+  justify-content: flex-start;
+  gap: 0.5rem;
+  margin-top: 1.5rem;
+}
+
+.pagination button {
+  font-family: var(--font-mono);
+  font-size: 0.78rem;
+  letter-spacing: 0.03em;
+  background: var(--ink-raised);
+  border: 1px solid var(--slate-hair);
+  color: var(--parchment);
+  padding: 0.5rem 1.1rem;
+  border-radius: 3px;
+  cursor: pointer;
+}
+
+.pagination button:hover:not(:disabled) { border-color: var(--gold); color: var(--gold); }
+
+.pagination button:disabled { opacity: 0.35; cursor: default; }
+
+.pagination .page-indicator {
+  font-family: var(--font-mono);
+  font-size: 0.78rem;
+  color: var(--parchment-dim);
+  align-self: center;
+  margin-left: 0.5rem;
 }
 
 footer {
