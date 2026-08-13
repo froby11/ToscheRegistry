@@ -12,7 +12,7 @@
 <body>
 
 <header class="topbar">
-  <span class="topbar-logo">The Tosche Registry</span>
+  <span class="topbar-logo"><span class="crest">&#9670;</span>The Tosche Registry</span>
   <nav class="topbar-nav">
     <a href="index.html" class="active">Citizens</a>
     <a href="claims.html">Claims</a>
@@ -28,9 +28,12 @@
     <div class="toolbar-stats" aria-live="polite">
       <span id="stat-total">&mdash;</span> citizens tracked &middot;
       <span id="stat-shown">&mdash;</span> currently shown &middot;
-      updated <span id="stat-updated">&mdash;</span> &middot;
-      sorting by: <span id="stat-sorting">Name</span>
+      updated <span id="stat-updated">&mdash;</span>
     </div>
+  </div>
+
+  <div class="table-topline">
+    <div class="sorting-indicator">Sorting by: <span id="stat-sorting">Name</span></div>
   </div>
 
   <div id="registry-status" class="registry-status" hidden></div>

@@ -168,7 +168,7 @@
     const btn = document.createElement("button");
     btn.className = "col-dropdown-btn";
     btn.type = "button";
-    btn.innerHTML = `${escapeHtml(COLUMN_LABELS[key])} <span class="caret">&#9662;</span>`;
+    btn.innerHTML = `<span>${escapeHtml(COLUMN_LABELS[key])}</span> <span class="caret">&#9662;</span>`;
 
     const menu = document.createElement("div");
     menu.className = "col-dropdown-menu";
@@ -266,24 +266,43 @@
     els.rankList.innerHTML = rankDraftOrder
       .map(
         (opt, i) => `
-      <li class="rank-item" data-index="${i}">
+      <li class="rank-item" draggable="true" data-index="${i}">
+        <span class="rank-drag-handle" title="Drag to reorder">&#8942;&#8942;</span>
         <span class="rank-position">${i + 1}</span>
         <span class="rank-name">${escapeHtml(opt)}</span>
-        <span class="rank-controls">
-          <button type="button" class="rank-move" data-dir="up" data-index="${i}" ${i === 0 ? "disabled" : ""} title="Move up">&#9650;</button>
-          <button type="button" class="rank-move" data-dir="down" data-index="${i}" ${i === rankDraftOrder.length - 1 ? "disabled" : ""} title="Move down">&#9660;</button>
-        </span>
       </li>`
       )
       .join("");
 
-    els.rankList.querySelectorAll(".rank-move").forEach((btn) => {
-      btn.addEventListener("click", () => {
-        const i = Number(btn.dataset.index);
-        const dir = btn.dataset.dir;
-        const j = dir === "up" ? i - 1 : i + 1;
-        if (j < 0 || j >= rankDraftOrder.length) return;
-        [rankDraftOrder[i], rankDraftOrder[j]] = [rankDraftOrder[j], rankDraftOrder[i]];
+    let dragFromIndex = null;
+
+    els.rankList.querySelectorAll(".rank-item").forEach((li) => {
+      li.addEventListener("dragstart", (e) => {
+        dragFromIndex = Number(li.dataset.index);
+        li.classList.add("dragging");
+        e.dataTransfer.effectAllowed = "move";
+      });
+
+      li.addEventListener("dragend", () => {
+        li.classList.remove("dragging");
+        els.rankList.querySelectorAll(".rank-item").forEach((el) => el.classList.remove("drag-over"));
+      });
+
+      li.addEventListener("dragover", (e) => {
+        e.preventDefault();
+        li.classList.add("drag-over");
+      });
+
+      li.addEventListener("dragleave", () => {
+        li.classList.remove("drag-over");
+      });
+
+      li.addEventListener("drop", (e) => {
+        e.preventDefault();
+        const toIndex = Number(li.dataset.index);
+        if (dragFromIndex === null || dragFromIndex === toIndex) return;
+        const [moved] = rankDraftOrder.splice(dragFromIndex, 1);
+        rankDraftOrder.splice(toIndex, 0, moved);
         renderRankList();
       });
     });
