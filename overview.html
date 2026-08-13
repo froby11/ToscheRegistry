@@ -12,7 +12,7 @@
 <body>
 
 <header class="topbar">
-  <span class="topbar-logo">The Tosche Registry</span>
+  <span class="topbar-logo"><span class="crest">&#9670;</span>The Tosche Registry</span>
   <nav class="topbar-nav">
     <a href="index.html">Citizens</a>
     <a href="claims.html">Claims</a>
@@ -20,10 +20,38 @@
   </nav>
 </header>
 
-<main class="placeholder-main">
+<main class="overview-main">
   <h1>Overview</h1>
-  <p class="detail-empty">A realm-wide overview is coming soon.</p>
+  <p class="overview-intro">Realm-wide totals across every city-state.</p>
+
+  <div id="overview-status" class="registry-status" hidden></div>
+
+  <section class="overview-section">
+    <h2>Total Population</h2>
+    <div id="population-chart" class="overview-chart"></div>
+    <ol id="population-leaderboard" class="overview-leaderboard"></ol>
+  </section>
+
+  <section class="overview-section">
+    <h2>Total Wealth</h2>
+    <div class="overview-chart">
+      <p class="detail-empty">No data source configured yet.</p>
+    </div>
+    <ol class="overview-leaderboard">
+      <li class="leaderboard-empty">No data source configured yet.</li>
+    </ol>
+  </section>
+
+  <section class="overview-section">
+    <h2>Total Activity (30d)</h2>
+    <div id="activity-chart" class="overview-chart"></div>
+    <ol id="activity-leaderboard" class="overview-leaderboard"></ol>
+  </section>
 </main>
+
+<script src="config.js"></script>
+<script src="claims-config.js"></script>
+<script src="overview.js"></script>
 
 <footer>
   <p>The Tosche Registry &middot; maintained by decree of the Crown</p>
