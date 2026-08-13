@@ -102,10 +102,14 @@
     panX = 0;
     panY = 0;
 
-    mapClip.style.clipPath = geo.clipPath;
     applyTransform();
 
-    mapOverlay.style.opacity = "0";
+    // Highlight only the selected claim's border; fade every other claim's tint out.
+    // Nothing is cropped — the whole map stays freely pannable underneath.
+    document.querySelectorAll(".claim-region").forEach((el) => {
+      el.classList.toggle("selected-claim", el.dataset.regionId === id);
+    });
+    mapOverlay.classList.add("focus-mode");
     mapOverlay.style.pointerEvents = "none";
 
     backBtn.hidden = false;
@@ -125,8 +129,8 @@
     panY = 0;
     mapImage.style.transform = "";
     mapOverlay.style.transform = "";
-    mapClip.style.clipPath = "";
-    mapOverlay.style.opacity = "";
+    document.querySelectorAll(".claim-region").forEach((el) => el.classList.remove("selected-claim"));
+    mapOverlay.classList.remove("focus-mode");
     mapOverlay.style.pointerEvents = "";
     backBtn.hidden = true;
     statsSection.hidden = true;
@@ -208,10 +212,12 @@
 
     el.addEventListener("mouseenter", () => {
       if (focused || !tooltip) return;
-      const stats = citizensLoaded ? computeStats(info.label) : null;
-      tooltip.innerHTML = stats
-        ? `<strong>${info.label}</strong><br>Population: ${stats.population}<br>Balance: &mdash;`
-        : `<strong>${info.label}</strong>`;
+      if (citizensLoaded) {
+        const stats = computeStats(info.label);
+        tooltip.innerHTML = `<strong>${info.label}</strong><br>Population: ${stats.population}<br>Balance: &mdash;`;
+      } else {
+        tooltip.innerHTML = `<strong>${info.label}</strong><br>Population: loading&hellip;<br>Balance: &mdash;`;
+      }
       tooltip.hidden = false;
     });
 

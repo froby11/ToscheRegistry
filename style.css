@@ -947,6 +947,21 @@ main {
   outline: none;
 }
 
+/* When a claim is focused (zoomed), fade every region's tint out except the
+   selected one, which gets a clean glowing border instead of a fill. */
+.map-overlay.focus-mode .claim-region {
+  fill-opacity: 0 !important;
+  stroke-opacity: 0 !important;
+  filter: none !important;
+  transform: none !important;
+}
+
+.map-overlay.focus-mode .claim-region.selected-claim {
+  stroke-opacity: 1 !important;
+  stroke-width: 5;
+  filter: drop-shadow(0 0 6px var(--gold)) !important;
+}
+
 .claim-region[data-region-id="region-3-west"] { fill: #a63a3a; stroke: #d65f5f; }
 .claim-region[data-region-id="region-1-north"] { fill: #9a9436; stroke: #c9c15a; }
 .claim-region[data-region-id="region-5-east"] { fill: #2f6b46; stroke: #52a374; }
