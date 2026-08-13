@@ -14,15 +14,9 @@
     return FACTIONS.some((f) => name.toLowerCase().includes(f.toLowerCase()));
   }
 
-  function citizenshipValue(name) {
-    const lowered = name.toLowerCase();
-    if (lowered.includes("trial citizen")) return "Trial Citizen";
-    if (lowered.includes("citizen")) return "Citizen";
-    return null;
-  }
-
   function isCitizenshipRole(name) {
-    return citizenshipValue(name) !== null;
+    const normalized = name.trim().toLowerCase();
+    return normalized === "citizen" || normalized === "trial citizen";
   }
 
   function isOtherRole(name) {
@@ -497,6 +491,29 @@
     return sorted;
   }
 
+  function updateIndicatorStyles() {
+    // Filter indicator: label turns gold when that column has an active include/exclude
+    ["citystate", "timezone", "citizenship", "other"].forEach((key) => {
+      const btn = document.querySelector(`th[data-column="${key}"] .col-dropdown-btn`);
+      if (!btn) return;
+      const state = filters[key];
+      const active = !!(state && (state.include.size > 0 || state.exclude.size > 0));
+      btn.classList.toggle("filter-active", active);
+    });
+
+    // Sort indicator: whichever column is currently driving the sort gets a gold outline/icon
+    document.querySelectorAll(".col-rank-btn").forEach((b) => b.classList.remove("sort-active"));
+    const activityBtn = document.querySelector("#th-activity .col-dropdown-btn");
+    if (activityBtn) activityBtn.classList.remove("sort-active");
+
+    if (sortKey === "activity") {
+      if (activityBtn) activityBtn.classList.add("sort-active");
+    } else if (sortKey !== "name") {
+      const rankBtn = document.querySelector(`th[data-column="${sortKey}"] .col-rank-btn`);
+      if (rankBtn) rankBtn.classList.add("sort-active");
+    }
+  }
+
   function applyFilters(resetPage) {
     if (resetPage !== false) currentPage = 1;
     const query = (els.search && els.search.value.trim().toLowerCase()) || "";
@@ -507,6 +524,7 @@
     const sorted = sortCitizens(filtered);
     if (els.statShown) els.statShown.textContent = sorted.length;
     renderTable(sorted);
+    updateIndicatorStyles();
   }
 
   function updateStats() {

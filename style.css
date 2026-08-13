@@ -316,6 +316,12 @@ main {
 
 .col-rank-btn:hover { color: var(--gold); border-color: var(--gold); }
 
+.col-rank-btn.sort-active {
+  color: var(--gold);
+  border-color: var(--gold);
+  background: var(--gold-soft);
+}
+
 .col-dropdown-btn {
   max-width: 100%;
   background: none;
@@ -340,6 +346,13 @@ main {
 }
 
 .col-dropdown-btn:hover { color: var(--gold); }
+
+.col-dropdown-btn.filter-active,
+.col-dropdown-btn.filter-active span:not(.caret),
+.col-dropdown-btn.sort-active,
+.col-dropdown-btn.sort-active span:not(.caret) {
+  color: var(--gold);
+}
 
 .col-dropdown-btn .caret { font-size: 0.65rem; flex-shrink: 0; }
 
