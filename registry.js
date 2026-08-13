@@ -6,6 +6,13 @@
 
   const FACTIONS = ["Pichia", "Arkanos", "Crari", "Arkavion", "Floodkeep"];
 
+  // Exact Discord role IDs for Citizen / Trial Citizen. ID-based matching is used
+  // instead of name matching because role display names vary (emoji, casing,
+  // similarly-named roles like "Non-Citizen") and can't be trusted to categorize
+  // correctly. Kept as strings — these are 19-digit Discord snowflakes, which
+  // exceed JS's safe integer range and lose precision if treated as numbers.
+  const CITIZENSHIP_ROLE_IDS = new Set(["1444736850639196305", "1444759694366212218"]);
+
   function isTimezoneRole(name) {
     return /timezone/i.test(name);
   }
@@ -14,13 +21,16 @@
     return FACTIONS.some((f) => name.toLowerCase().includes(f.toLowerCase()));
   }
 
-  function isCitizenshipRole(name) {
-    const normalized = name.trim().toLowerCase();
+  function isCitizenshipRole(role) {
+    if (role && role.id != null && CITIZENSHIP_ROLE_IDS.has(String(role.id))) return true;
+    // fallback for roles fetched before the bot started sending string IDs, or
+    // if the id is ever missing for some reason
+    const normalized = (role && role.name ? role.name : "").trim().toLowerCase();
     return normalized === "citizen" || normalized === "trial citizen";
   }
 
-  function isOtherRole(name) {
-    return !isTimezoneRole(name) && !isFactionRole(name) && !isCitizenshipRole(name);
+  function isOtherRole(role) {
+    return !isTimezoneRole(role.name) && !isFactionRole(role.name) && !isCitizenshipRole(role);
   }
 
   // Split a citizen's roles into the four registry categories.
@@ -29,8 +39,8 @@
     return {
       citystate: roles.filter((r) => isFactionRole(r.name)),
       timezone: roles.filter((r) => isTimezoneRole(r.name)),
-      citizenship: roles.filter((r) => isCitizenshipRole(r.name)),
-      other: roles.filter((r) => isOtherRole(r.name)),
+      citizenship: roles.filter((r) => isCitizenshipRole(r)),
+      other: roles.filter((r) => isOtherRole(r)),
     };
   }
 
