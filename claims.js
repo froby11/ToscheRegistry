@@ -8,6 +8,7 @@
   const tooltip = document.getElementById("map-tooltip");
   const mapImage = document.getElementById("map-image");
   const mapOverlay = document.getElementById("map-overlay");
+  const mapClip = document.getElementById("map-clip");
   const mapWrap = document.getElementById("map-wrap");
   const backBtn = document.getElementById("map-back-btn");
   const statsSection = document.getElementById("claim-stats-inline");
@@ -101,7 +102,7 @@
     panX = 0;
     panY = 0;
 
-    mapImage.style.clipPath = geo.clipPath;
+    mapClip.style.clipPath = geo.clipPath;
     applyTransform();
 
     mapOverlay.style.opacity = "0";
@@ -124,7 +125,7 @@
     panY = 0;
     mapImage.style.transform = "";
     mapOverlay.style.transform = "";
-    mapImage.style.clipPath = "";
+    mapClip.style.clipPath = "";
     mapOverlay.style.opacity = "";
     mapOverlay.style.pointerEvents = "";
     backBtn.hidden = true;

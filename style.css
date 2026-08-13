@@ -785,12 +785,18 @@ main {
   cursor: grabbing;
 }
 
+.map-clip {
+  position: relative;
+  width: 100%;
+  transition: clip-path 0.7s cubic-bezier(0.2, 0.8, 0.2, 1);
+}
+
 .map-image {
   display: block;
   width: 100%;
   height: auto;
   transform-origin: 0 0;
-  transition: transform 0.7s cubic-bezier(0.2, 0.8, 0.2, 1), clip-path 0.7s cubic-bezier(0.2, 0.8, 0.2, 1);
+  transition: transform 0.7s cubic-bezier(0.2, 0.8, 0.2, 1);
   user-select: none;
   -webkit-user-drag: none;
 }
