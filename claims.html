@@ -1,0 +1,98 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Claims — The Tosche Registry</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@500;600;700&family=Source+Serif+4:opsz,wght@8..60,400;8..60,600&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+<header class="topbar">
+  <span class="topbar-logo"><span class="crest">&#9670;</span>The Tosche Registry</span>
+  <nav class="topbar-nav">
+    <a href="index.html">Citizens</a>
+    <a href="claims.html" class="active">Claims</a>
+    <a href="overview.html">Overview</a>
+  </nav>
+</header>
+
+<main class="claims-main">
+  <h1>Claims</h1>
+  <p class="claims-intro">Hover a region to see its name. Click to zoom in.</p>
+
+  <div class="map-wrap" id="map-wrap">
+    <button class="map-back-btn" id="map-back-btn" hidden>&larr; Back to full map</button>
+    <div class="map-stage" id="map-stage">
+      <img class="map-image" id="map-image" src="assets/island-map.png" alt="Map of the Kingdom of Tosche">
+      <svg class="map-overlay" id="map-overlay" viewBox="0 0 1183 1330" preserveAspectRatio="xMidYMid meet">
+        <polygon class="claim-region" data-region-id="region-1-north" points="857,94 819,105 790,152 714,166 696,198 620,187 525,196 483,222 455,280 436,287 413,318 413,339 446,343 521,304 598,295 641,301 661,331 659,368 644,406 654,442 734,500 769,619 823,638 865,626 886,602 898,560 920,543 876,479 876,437 882,423 903,412 892,405 893,367 941,255 934,239 940,198 925,180 913,118 885,98"></polygon>
+
+        <polygon class="claim-region" data-region-id="region-2-outpost" points="674,213 670,223 670,229 669,230 669,242 671,247 674,250 677,251 689,251 690,252 709,253 710,254 716,254 717,255 732,255 738,253 741,250 745,238 745,219 743,214 741,212 738,211 699,212 691,209 684,204 682,204 679,206"></polygon>
+
+        <polygon class="claim-region" data-region-id="region-3-west" points="641,302 531,303 465,340 413,340 385,386 338,403 313,469 258,512 258,545 234,559 234,609 215,647 231,680 231,723 214,765 180,770 172,781 201,782 197,837 170,873 185,896 223,911 327,906 371,914 489,900 518,872 534,872 546,698 685,628 745,631 768,620 733,500 649,434 643,406 660,331"></polygon>
+
+        <polygon class="claim-region" data-region-id="region-5-east" points="967,545 956,553 924,553 920,544 904,555 885,605 848,637 823,639 787,629 780,696 765,716 742,728 726,772 705,790 700,806 702,831 717,858 756,882 770,904 794,904 802,918 858,937 931,932 965,913 965,877 997,877 1019,888 1049,857 1058,832 1057,796 1033,764 996,762 992,663 998,656 1031,656 1037,678 1086,676 1092,664 1045,660 1045,628 1072,627 1092,616 1042,623 1029,634 996,634 995,578"></polygon>
+
+        <polygon class="claim-region" data-region-id="region-4-southcenter" points="774,621 745,632 714,626 685,629 654,651 621,659 554,691 543,706 542,761 535,780 535,872 550,872 559,881 583,942 596,953 613,955 638,987 705,995 716,980 724,943 750,924 762,904 769,904 756,883 728,870 716,858 701,831 699,806 704,790 725,772 741,728 765,715 782,689 786,628"></polygon>
+
+        <polygon class="claim-region" data-region-id="region-6-obelisk" points="214,648 197,666 196,698 192,702 157,700 158,659 151,665 56,661 56,692 49,717 47,771 151,770 161,778 171,781 180,769 198,769 214,764 222,750 232,709 230,680"></polygon>
+      </svg>
+    </div>
+    <div class="map-tooltip" id="map-tooltip" hidden></div>
+  </div>
+
+  <div class="claim-stats-inline" id="claim-stats-inline" hidden>
+    <h2 id="claim-stats-title">Stats</h2>
+    <div class="claim-stats-grid">
+      <div class="claim-stat-block">
+        <h3>Land Population</h3>
+        <div id="stat-population-content"></div>
+      </div>
+      <div class="claim-stat-block">
+        <h3>Land Balance</h3>
+        <p class="detail-empty">No data source configured yet.</p>
+      </div>
+      <div class="claim-stat-block claim-stat-block-wide">
+        <h3>Activity — Mean vs Median (30d)</h3>
+        <div id="stat-activity-content"></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="claims-columns">
+    <section class="claims-block">
+      <h3>City-States</h3>
+      <ul class="claims-list">
+        <li>Crari</li>
+        <li>Arkanos</li>
+        <li>Floodkeep</li>
+        <li>Arkavion</li>
+        <li>Pichia</li>
+      </ul>
+    </section>
+
+    <section class="claims-block">
+      <h3>Territories</h3>
+      <ul class="claims-list">
+        <li>CrariBank</li>
+        <li>Spikeleland</li>
+        <li>Nydelon</li>
+      </ul>
+    </section>
+  </div>
+</main>
+
+<script src="config.js"></script>
+<script src="claims-config.js"></script>
+<script src="claims.js"></script>
+
+<footer>
+  <p>The Tosche Registry &middot; maintained by decree of the Crown</p>
+</footer>
+
+</body>
+</html>
