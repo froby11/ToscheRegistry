@@ -658,6 +658,10 @@ main {
 }
 
 .activity-sort-icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
   background: none;
   border: 1px solid var(--slate-hair);
   color: var(--parchment-dim);

@@ -131,28 +131,21 @@
 
   function applyTransform() {
     const t = `translate(${baseDx + panX}px, ${baseDy + panY}px) scale(${scale})`;
-    console.log("[claims] applyTransform:", t, "mapStage found:", !!mapStage);
     mapStage.style.transform = t;
   }
 
   function focusClaim(id) {
     const info = CLAIM_REGIONS[id];
     const geo = CLAIM_GEOMETRY[id];
-    console.log("[claims] focusClaim called for", id, "info:", info, "geo:", !!geo);
-    if (!info || !geo) {
-      console.warn("[claims] missing info or geo for", id, "- aborting");
-      return;
-    }
+    if (!info || !geo) return;
 
     const rect = mapWrap.getBoundingClientRect();
-    console.log("[claims] mapWrap rect:", rect.width, rect.height);
     const cxPct = (geo.bbox.xMinPct + geo.bbox.xMaxPct) / 2;
     const cyPct = (geo.bbox.yMinPct + geo.bbox.yMaxPct) / 2;
     const spanX = geo.bbox.xMaxPct - geo.bbox.xMinPct;
     const spanY = geo.bbox.yMaxPct - geo.bbox.yMinPct;
     const span = Math.max(spanX, spanY);
     scale = Math.min(6, Math.max(1.6, 80 / span));
-    console.log("[claims] cxPct", cxPct, "cyPct", cyPct, "span", span, "scale", scale);
 
     const regionCenterX = (cxPct / 100) * rect.width;
     const regionCenterY = (cyPct / 100) * rect.height;
@@ -165,7 +158,6 @@
     baseDy = containerCenterY - regionCenterY * scale;
     panX = 0;
     panY = 0;
-    console.log("[claims] baseDx", baseDx, "baseDy", baseDy);
 
     applyTransform();
 
