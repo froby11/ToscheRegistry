@@ -45,7 +45,20 @@
 
   <div class="claim-stats-inline" id="claim-stats-inline" hidden>
     <h2 id="claim-stats-title">Stats</h2>
-    <p class="detail-empty">Coming soon.</p>
+    <div class="claim-stats-grid">
+      <div class="claim-stat-block">
+        <h3>Land Population</h3>
+        <div id="stat-population-content"></div>
+      </div>
+      <div class="claim-stat-block">
+        <h3>Land Balance</h3>
+        <p class="detail-empty">No data source configured yet.</p>
+      </div>
+      <div class="claim-stat-block claim-stat-block-wide">
+        <h3>Activity — Mean vs Median (30d)</h3>
+        <div id="stat-activity-content"></div>
+      </div>
+    </div>
   </div>
 
   <div class="claims-columns">
@@ -71,6 +84,7 @@
   </div>
 </main>
 
+<script src="config.js"></script>
 <script src="claims-config.js"></script>
 <script src="claims.js"></script>
 
