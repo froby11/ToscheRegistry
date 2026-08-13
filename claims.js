@@ -91,29 +91,39 @@
   }
 
   async function renderOfficials(label) {
+    console.log("[claims.js] renderOfficials called with label:", label, "officialsContent found:", !!officialsContent);
     if (!officialsContent) return;
     officialsContent.hidden = false;
     officialsContent.innerHTML = `<p class="detail-empty">Loading officials&hellip;</p>`;
 
     if (!GUILD_ID || GUILD_ID === "YOUR_GUILD_ID_HERE" || !API_BASE) {
+      console.warn("[claims.js] renderOfficials aborting — GUILD_ID or API_BASE missing/placeholder", {
+        GUILD_ID,
+        API_BASE,
+      });
       officialsContent.innerHTML = "";
       officialsContent.hidden = true;
       return;
     }
 
+    const url = `${API_BASE}/api/officials?guild_id=${encodeURIComponent(GUILD_ID)}&city_state=${encodeURIComponent(label)}`;
+    console.log("[claims.js] fetching officials from:", url);
+
     try {
-      const res = await fetch(
-        `${API_BASE}/api/officials?guild_id=${encodeURIComponent(GUILD_ID)}&city_state=${encodeURIComponent(label)}`
-      );
+      const res = await fetch(url);
+      console.log("[claims.js] officials fetch response status:", res.status, res.ok);
       if (!res.ok) throw new Error(`API returned ${res.status}`);
       const officials = await res.json();
+      console.log("[claims.js] officials data received:", officials);
 
       const lord = officials.find((o) => o.official_role === "lord") || null;
       const mayor = officials.find((o) => o.official_role === "mayor") || null;
+      console.log("[claims.js] lord:", lord, "mayor:", mayor);
 
       officialsContent.innerHTML = renderOfficialCard(lord, "Lord") + renderOfficialCard(mayor, "Mayor");
+      console.log("[claims.js] officials HTML set. officialsContent.hidden is now:", officialsContent.hidden);
     } catch (err) {
-      console.error("Could not load officials:", err);
+      console.error("[claims.js] Could not load officials:", err);
       officialsContent.innerHTML = `<p class="detail-empty">Could not load officials.</p>`;
     }
   }

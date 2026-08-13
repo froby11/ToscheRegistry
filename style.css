@@ -910,6 +910,10 @@ main {
   max-width: 40rem;
 }
 
+.claim-officials[hidden] {
+  display: none;
+}
+
 .official-card {
   display: flex;
   align-items: center;
