@@ -2,6 +2,8 @@
 (function () {
   "use strict";
 
+  console.log("[claims.js] VERSION MARKER: officials-fix-2026-08-13-2");
+
   const API_BASE = (window.TOSCHE_CONFIG && TOSCHE_CONFIG.API_BASE || "").replace(/\/$/, "");
   const GUILD_ID = window.TOSCHE_CONFIG && TOSCHE_CONFIG.GUILD_ID;
 
@@ -301,12 +303,17 @@
     });
 
     el.addEventListener("click", () => {
+      console.log("[claims.js] click fired for region:", id, "label:", info.label);
       if (suppressNextClick) {
         suppressNextClick = false;
         return;
       }
       if (tooltip) tooltip.hidden = true;
-      focusClaim(id);
+      try {
+        focusClaim(id);
+      } catch (err) {
+        console.error("[claims.js] focusClaim threw an error:", err);
+      }
     });
 
     el.setAttribute("tabindex", "0");
