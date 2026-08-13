@@ -511,14 +511,11 @@
       btn.classList.toggle("filter-active", active);
     });
 
-    // Sort indicator: whichever column is currently driving the sort gets a gold outline/icon
+    // Sort indicator: whichever column is currently driving the sort gets a gold outline/icon.
+    // (The Activity icon manages its own gold "active" state directly in updateActivityIcon.)
     document.querySelectorAll(".col-rank-btn").forEach((b) => b.classList.remove("sort-active"));
-    const activityBtn = document.querySelector("#th-activity .col-dropdown-btn");
-    if (activityBtn) activityBtn.classList.remove("sort-active");
 
-    if (sortKey === "activity") {
-      if (activityBtn) activityBtn.classList.add("sort-active");
-    } else if (sortKey !== "name") {
+    if (sortKey !== "name" && sortKey !== "activity") {
       const rankBtn = document.querySelector(`th[data-column="${sortKey}"] .col-rank-btn`);
       if (rankBtn) rankBtn.classList.add("sort-active");
     }
@@ -562,6 +559,22 @@
 
   if (els.search) els.search.addEventListener("input", applyFilters);
 
+  let activityToggleState = "off"; // "off" | "desc" | "asc"
+
+  function updateActivityIcon(btn) {
+    btn.classList.toggle("active", activityToggleState !== "off");
+    if (activityToggleState === "desc") {
+      btn.innerHTML = "&#9660;";
+      btn.title = "Sorting: highest → lowest (click for lowest → highest)";
+    } else if (activityToggleState === "asc") {
+      btn.innerHTML = "&#9650;";
+      btn.title = "Sorting: lowest → highest (click to turn off)";
+    } else {
+      btn.innerHTML = "&#8645;";
+      btn.title = "Sort by activity";
+    }
+  }
+
   function buildActivityHeader() {
     const th = document.getElementById("th-activity");
     if (!th) return;
@@ -569,45 +582,36 @@
     const headerWrap = document.createElement("div");
     headerWrap.className = "col-header-wrap";
 
-    const wrap = document.createElement("div");
-    wrap.className = "col-dropdown";
+    const label = document.createElement("span");
+    label.className = "activity-label";
+    label.textContent = "Activity (30d)";
 
-    const btn = document.createElement("button");
-    btn.className = "col-dropdown-btn";
-    btn.type = "button";
-    btn.innerHTML = `<span>Activity (30d)</span> <span class="caret">&#9662;</span>`;
+    const iconBtn = document.createElement("button");
+    iconBtn.type = "button";
+    iconBtn.className = "activity-sort-icon";
+    updateActivityIcon(iconBtn);
 
-    const menu = document.createElement("div");
-    menu.className = "col-dropdown-menu";
-    menu.hidden = true;
-    menu.innerHTML = `
-      <button type="button" class="activity-sort-option" data-dir="desc">Highest &rarr; Lowest</button>
-      <button type="button" class="activity-sort-option" data-dir="asc">Lowest &rarr; Highest</button>
-    `;
+    iconBtn.addEventListener("click", () => {
+      if (activityToggleState === "off") activityToggleState = "desc";
+      else if (activityToggleState === "desc") activityToggleState = "asc";
+      else activityToggleState = "off";
 
-    wrap.addEventListener("click", (e) => e.stopPropagation());
-    btn.addEventListener("click", () => {
-      document.querySelectorAll(".col-dropdown-menu").forEach((m) => {
-        if (m !== menu) m.hidden = true;
-      });
-      menu.hidden = !menu.hidden;
-    });
-
-    menu.querySelectorAll(".activity-sort-option").forEach((optBtn) => {
-      optBtn.addEventListener("click", () => {
+      if (activityToggleState === "off") {
+        if (sortKey === "activity") sortKey = "name";
+      } else {
         sortKey = "activity";
-        activitySortAsc = optBtn.dataset.dir === "asc";
-        if (els.statSorting) els.statSorting.textContent = "Activity (30d)";
-        menu.querySelectorAll(".activity-sort-option").forEach((b) => b.classList.remove("active"));
-        optBtn.classList.add("active");
-        menu.hidden = true;
-        applyFilters(false);
-      });
+        activitySortAsc = activityToggleState === "asc";
+      }
+
+      if (els.statSorting) {
+        els.statSorting.textContent = activityToggleState === "off" ? "Name" : "Activity (30d)";
+      }
+      updateActivityIcon(iconBtn);
+      applyFilters(false);
     });
 
-    wrap.appendChild(btn);
-    wrap.appendChild(menu);
-    headerWrap.appendChild(wrap);
+    headerWrap.appendChild(label);
+    headerWrap.appendChild(iconBtn);
     th.innerHTML = "";
     th.appendChild(headerWrap);
   }

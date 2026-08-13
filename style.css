@@ -649,23 +649,34 @@ main {
 
 .no-timezone { color: #8a92a3; }
 
-.activity-sort-option {
-  display: block;
-  width: 100%;
-  text-align: left;
-  background: none;
-  border: none;
-  color: var(--parchment);
-  font-family: var(--font-body);
-  font-size: 0.85rem;
-  padding: 0.45rem 0.5rem;
-  border-radius: 3px;
-  cursor: pointer;
+.activity-label {
+  font-family: var(--font-mono);
+  font-size: 0.7rem;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--parchment-dim);
 }
 
-.activity-sort-option:hover { background: var(--ink); }
+.activity-sort-icon {
+  background: none;
+  border: 1px solid var(--slate-hair);
+  color: var(--parchment-dim);
+  border-radius: 3px;
+  width: 1.4rem;
+  height: 1.4rem;
+  line-height: 1;
+  font-size: 0.75rem;
+  cursor: pointer;
+  flex-shrink: 0;
+}
 
-.activity-sort-option.active { color: var(--gold); background: var(--gold-soft); }
+.activity-sort-icon:hover { color: var(--gold); border-color: var(--gold); }
+
+.activity-sort-icon.active {
+  color: var(--gold);
+  border-color: var(--gold);
+  background: var(--gold-soft);
+}
 
 .col-recruiter { color: var(--parchment-dim); font-size: 0.85rem; }
 
