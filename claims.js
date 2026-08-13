@@ -4,8 +4,8 @@
 
   console.log("[claims.js] VERSION MARKER: officials-fix-2026-08-13-2");
 
-  const API_BASE = (window.TOSCHE_CONFIG && TOSCHE_CONFIG.API_BASE || "").replace(/\/$/, "");
-  const GUILD_ID = window.TOSCHE_CONFIG && TOSCHE_CONFIG.GUILD_ID;
+  const API_BASE = (typeof TOSCHE_CONFIG !== "undefined" && TOSCHE_CONFIG.API_BASE || "").replace(/\/$/, "");
+  const GUILD_ID = typeof TOSCHE_CONFIG !== "undefined" ? TOSCHE_CONFIG.GUILD_ID : undefined;
 
   const tooltip = document.getElementById("map-tooltip");
   const mapStage = document.getElementById("map-stage");
