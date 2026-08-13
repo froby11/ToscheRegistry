@@ -65,7 +65,7 @@
   let activitySortAsc = false; // activity defaults to highest-first when first activated
   let rankOrder = []; // current active custom rank order (array of role names, highest first), only meaningful when sortKey isn't "name"
 
-  // Per-column filter state: Set of accepted values, or null meaning "everything, no filter yet built"
+  // Per-column filter state: { include: Set, exclude: Set }, or null meaning "not built yet"
   const filters = {
     citystate: null,
     timezone: null,
@@ -109,9 +109,21 @@
     return luminance > 0.6 ? "#161b22" : "#ede6d3";
   }
 
+  function lightenHex(hex, amount) {
+    const c = hex.replace("#", "");
+    const r = parseInt(c.substring(0, 2), 16);
+    const g = parseInt(c.substring(2, 4), 16);
+    const b = parseInt(c.substring(4, 6), 16);
+    const lighten = (v) => Math.round(v + (255 - v) * amount);
+    return `#${[lighten(r), lighten(g), lighten(b)].map((v) => v.toString(16).padStart(2, "0")).join("")}`;
+  }
+
   function renderBadge(role) {
-    const bg = role.color || "#3a4250";
-    const fg = textColorFor(role.color);
+    let bg = role.color || "#3a4250";
+    if (role.name && role.name.trim().toLowerCase() === "na timezone") {
+      bg = lightenHex(bg, 0.28);
+    }
+    const fg = textColorFor(bg);
     return `<span class="badge" style="background:${bg}4d;color:${fg};border-color:${bg}99">${escapeHtml(
       role.name
     )}</span>`;
@@ -157,7 +169,7 @@
 
     const options = optionsForColumn(key);
     if (filters[key] === null) {
-      filters[key] = new Set(); // opt-in: nothing selected = no restriction on this column
+      filters[key] = { include: new Set(), exclude: new Set() }; // opt-in: nothing selected = no restriction
     }
 
     const headerWrap = document.createElement("div");
@@ -182,18 +194,58 @@
       menu.appendChild(empty);
     } else {
       options.forEach((opt) => {
-        const id = `filter-${key}-${opt.replace(/\W+/g, "-")}`;
-        const row = document.createElement("label");
+        const row = document.createElement("div");
         row.className = "dropdown-option";
-        row.innerHTML = `
-          <input type="checkbox" id="${id}" ${filters[key].has(opt) ? "checked" : ""}>
-          <span>${escapeHtml(opt)}</span>
-        `;
-        row.querySelector("input").addEventListener("change", (e) => {
-          if (e.target.checked) filters[key].add(opt);
-          else filters[key].delete(opt);
+
+        const label = document.createElement("span");
+        label.className = "dropdown-option-label";
+        label.textContent = opt;
+
+        const includeBtn = document.createElement("button");
+        includeBtn.type = "button";
+        includeBtn.className = "dropdown-toggle-btn dropdown-include-btn";
+        includeBtn.title = `Only show citizens with ${opt}`;
+        includeBtn.innerHTML = "&#10003;";
+        if (filters[key].include.has(opt)) includeBtn.classList.add("active");
+
+        const excludeBtn = document.createElement("button");
+        excludeBtn.type = "button";
+        excludeBtn.className = "dropdown-toggle-btn dropdown-exclude-btn";
+        excludeBtn.title = `Hide citizens with ${opt}`;
+        excludeBtn.innerHTML = "&#10005;";
+        if (filters[key].exclude.has(opt)) excludeBtn.classList.add("active");
+
+        includeBtn.addEventListener("click", () => {
+          const nowActive = !includeBtn.classList.contains("active");
+          filters[key].include.delete(opt);
+          filters[key].exclude.delete(opt);
+          excludeBtn.classList.remove("active");
+          if (nowActive) {
+            filters[key].include.add(opt);
+            includeBtn.classList.add("active");
+          } else {
+            includeBtn.classList.remove("active");
+          }
           applyFilters();
         });
+
+        excludeBtn.addEventListener("click", () => {
+          const nowActive = !excludeBtn.classList.contains("active");
+          filters[key].include.delete(opt);
+          filters[key].exclude.delete(opt);
+          includeBtn.classList.remove("active");
+          if (nowActive) {
+            filters[key].exclude.add(opt);
+            excludeBtn.classList.add("active");
+          } else {
+            excludeBtn.classList.remove("active");
+          }
+          applyFilters();
+        });
+
+        row.appendChild(label);
+        row.appendChild(includeBtn);
+        row.appendChild(excludeBtn);
         menu.appendChild(row);
       });
     }
@@ -334,10 +386,12 @@
 
   function citizenPassesFilters(citizen) {
     for (const key of Object.keys(filters)) {
-      const allowed = filters[key];
-      if (!allowed || allowed.size === 0) continue; // nothing selected, no restriction
+      const state = filters[key];
+      if (!state) continue;
       const values = valuesForCitizenColumn(citizen, key);
-      if (!values.some((v) => allowed.has(v))) return false;
+
+      if (state.exclude.size > 0 && values.some((v) => state.exclude.has(v))) return false;
+      if (state.include.size > 0 && !values.some((v) => state.include.has(v))) return false;
     }
     return true;
   }
@@ -483,23 +537,51 @@
   function buildActivityHeader() {
     const th = document.getElementById("th-activity");
     if (!th) return;
-    updateActivityHeaderLabel(th);
-    th.addEventListener("click", () => {
-      if (sortKey === "activity") {
-        activitySortAsc = !activitySortAsc;
-      } else {
-        sortKey = "activity";
-        activitySortAsc = false;
-      }
-      updateActivityHeaderLabel(th);
-      if (els.statSorting) els.statSorting.textContent = "Activity (30d)";
-      applyFilters(false);
-    });
-  }
 
-  function updateActivityHeaderLabel(th) {
-    const arrow = sortKey === "activity" ? (activitySortAsc ? " &#9650;" : " &#9660;") : "";
-    th.innerHTML = `<button type="button" class="col-sort-btn">Activity (30d)${arrow}</button>`;
+    const headerWrap = document.createElement("div");
+    headerWrap.className = "col-header-wrap";
+
+    const wrap = document.createElement("div");
+    wrap.className = "col-dropdown";
+
+    const btn = document.createElement("button");
+    btn.className = "col-dropdown-btn";
+    btn.type = "button";
+    btn.innerHTML = `<span>Activity (30d)</span> <span class="caret">&#9662;</span>`;
+
+    const menu = document.createElement("div");
+    menu.className = "col-dropdown-menu";
+    menu.hidden = true;
+    menu.innerHTML = `
+      <button type="button" class="activity-sort-option" data-dir="desc">Highest &rarr; Lowest</button>
+      <button type="button" class="activity-sort-option" data-dir="asc">Lowest &rarr; Highest</button>
+    `;
+
+    wrap.addEventListener("click", (e) => e.stopPropagation());
+    btn.addEventListener("click", () => {
+      document.querySelectorAll(".col-dropdown-menu").forEach((m) => {
+        if (m !== menu) m.hidden = true;
+      });
+      menu.hidden = !menu.hidden;
+    });
+
+    menu.querySelectorAll(".activity-sort-option").forEach((optBtn) => {
+      optBtn.addEventListener("click", () => {
+        sortKey = "activity";
+        activitySortAsc = optBtn.dataset.dir === "asc";
+        if (els.statSorting) els.statSorting.textContent = "Activity (30d)";
+        menu.querySelectorAll(".activity-sort-option").forEach((b) => b.classList.remove("active"));
+        optBtn.classList.add("active");
+        menu.hidden = true;
+        applyFilters(false);
+      });
+    });
+
+    wrap.appendChild(btn);
+    wrap.appendChild(menu);
+    headerWrap.appendChild(wrap);
+    th.innerHTML = "";
+    th.appendChild(headerWrap);
   }
 
   async function init() {
@@ -527,8 +609,8 @@
           (opt) => opt.toLowerCase() === presetCitystate.toLowerCase()
         );
         if (match) {
-          filters.citystate.add(match);
-          buildColumnHeader("citystate"); // rebuild so the checkbox shows checked
+          filters.citystate.include.add(match);
+          buildColumnHeader("citystate"); // rebuild so the button shows active
         }
       }
 

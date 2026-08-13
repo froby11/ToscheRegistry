@@ -14,6 +14,7 @@
   const statsTitle = document.getElementById("claim-stats-title");
   const popContent = document.getElementById("stat-population-content");
   const activityContent = document.getElementById("stat-activity-content");
+  const officialsContent = document.getElementById("claim-officials");
 
   let citizens = [];
   let citizensLoaded = false;
@@ -55,6 +56,58 @@
     const rem = m % 60;
     if (h === 0) return `${rem}m`;
     return `${h}h ${rem}m`;
+  }
+
+  function headUrl(citizen) {
+    if (citizen.ign) return `https://mc-heads.net/avatar/${encodeURIComponent(citizen.ign)}/48`;
+    return null;
+  }
+
+  async function renderOfficials(label) {
+    if (!officialsContent) return;
+    officialsContent.innerHTML = `<p class="detail-empty">Loading officials&hellip;</p>`;
+
+    if (!GUILD_ID || GUILD_ID === "YOUR_GUILD_ID_HERE" || !API_BASE) {
+      officialsContent.innerHTML = "";
+      return;
+    }
+
+    try {
+      const res = await fetch(
+        `${API_BASE}/api/officials?guild_id=${encodeURIComponent(GUILD_ID)}&city_state=${encodeURIComponent(label)}`
+      );
+      if (!res.ok) throw new Error(`API returned ${res.status}`);
+      const officials = await res.json();
+
+      if (!officials.length) {
+        officialsContent.innerHTML = `<p class="detail-empty">No Lord or Mayor assigned yet.</p>`;
+        return;
+      }
+
+      const order = { lord: 0, mayor: 1 };
+      officials.sort((a, b) => (order[a.official_role] ?? 2) - (order[b.official_role] ?? 2));
+
+      officialsContent.innerHTML = officials
+        .map((o) => {
+          const head = headUrl(o);
+          const name = o.ign || o.discord_username || `Unknown (${o.discord_id})`;
+          const roleLabel = o.official_role === "lord" ? "Lord" : "Mayor";
+          return `
+          <div class="official-card">
+            ${head ? `<img class="official-head" src="${head}" alt="">` : `<div class="official-head portrait-placeholder"></div>`}
+            <div class="official-info">
+              <p class="official-name">${name}</p>
+              <p class="official-sub">${o.discord_username ? "@" + o.discord_username : ""}</p>
+              <p class="official-sub">Activity (30d): ${o.activity_30d_minutes ? formatMinutes(o.activity_30d_minutes) : "&mdash;"}</p>
+            </div>
+            <span class="official-badge">${roleLabel}</span>
+          </div>`;
+        })
+        .join("");
+    } catch (err) {
+      console.error("Could not load officials:", err);
+      officialsContent.innerHTML = `<p class="detail-empty">Could not load officials.</p>`;
+    }
   }
 
   // ------------------------------------------------------------------
@@ -122,6 +175,11 @@
     statsSection.hidden = false;
     statsTitle.textContent = `${info.label} — Stats`;
     renderStats(info.label);
+    if (info.type === "citystate") {
+      renderOfficials(info.label);
+    } else if (officialsContent) {
+      officialsContent.innerHTML = "";
+    }
 
     focused = true;
     mapWrap.classList.add("focused");
