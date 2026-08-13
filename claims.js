@@ -59,16 +59,43 @@
   }
 
   function headUrl(citizen) {
-    if (citizen.ign) return `https://mc-heads.net/avatar/${encodeURIComponent(citizen.ign)}/48`;
+    if (citizen.ign) return `https://mc-heads.net/avatar/${encodeURIComponent(citizen.ign)}/40`;
     return null;
+  }
+
+  function renderOfficialCard(o, roleLabel) {
+    if (!o) {
+      return `
+      <div class="official-card official-card-empty">
+        <div class="official-head portrait-placeholder"></div>
+        <div class="official-info">
+          <span class="citizen-name">Not yet assigned</span>
+        </div>
+        <span class="official-badge">${roleLabel}</span>
+      </div>`;
+    }
+    const head = headUrl(o);
+    const name = o.ign || o.discord_username || `Unknown (${o.discord_id})`;
+    return `
+    <div class="official-card">
+      ${head ? `<img class="official-head" src="${head}" alt="">` : `<div class="official-head portrait-placeholder"></div>`}
+      <div class="official-info">
+        <span class="citizen-name">${name}</span>
+        <span class="citizen-discord">${o.discord_username ? "@" + o.discord_username : ""}</span>
+        <span class="official-activity">Activity (30d): ${o.activity_30d_minutes ? formatMinutes(o.activity_30d_minutes) : "&mdash;"}</span>
+      </div>
+      <span class="official-badge">${roleLabel}</span>
+    </div>`;
   }
 
   async function renderOfficials(label) {
     if (!officialsContent) return;
+    officialsContent.hidden = false;
     officialsContent.innerHTML = `<p class="detail-empty">Loading officials&hellip;</p>`;
 
     if (!GUILD_ID || GUILD_ID === "YOUR_GUILD_ID_HERE" || !API_BASE) {
       officialsContent.innerHTML = "";
+      officialsContent.hidden = true;
       return;
     }
 
@@ -79,31 +106,10 @@
       if (!res.ok) throw new Error(`API returned ${res.status}`);
       const officials = await res.json();
 
-      if (!officials.length) {
-        officialsContent.innerHTML = `<p class="detail-empty">No Lord or Mayor assigned yet.</p>`;
-        return;
-      }
+      const lord = officials.find((o) => o.official_role === "lord") || null;
+      const mayor = officials.find((o) => o.official_role === "mayor") || null;
 
-      const order = { lord: 0, mayor: 1 };
-      officials.sort((a, b) => (order[a.official_role] ?? 2) - (order[b.official_role] ?? 2));
-
-      officialsContent.innerHTML = officials
-        .map((o) => {
-          const head = headUrl(o);
-          const name = o.ign || o.discord_username || `Unknown (${o.discord_id})`;
-          const roleLabel = o.official_role === "lord" ? "Lord" : "Mayor";
-          return `
-          <div class="official-card">
-            ${head ? `<img class="official-head" src="${head}" alt="">` : `<div class="official-head portrait-placeholder"></div>`}
-            <div class="official-info">
-              <p class="official-name">${name}</p>
-              <p class="official-sub">${o.discord_username ? "@" + o.discord_username : ""}</p>
-              <p class="official-sub">Activity (30d): ${o.activity_30d_minutes ? formatMinutes(o.activity_30d_minutes) : "&mdash;"}</p>
-            </div>
-            <span class="official-badge">${roleLabel}</span>
-          </div>`;
-        })
-        .join("");
+      officialsContent.innerHTML = renderOfficialCard(lord, "Lord") + renderOfficialCard(mayor, "Mayor");
     } catch (err) {
       console.error("Could not load officials:", err);
       officialsContent.innerHTML = `<p class="detail-empty">Could not load officials.</p>`;
@@ -179,6 +185,7 @@
       renderOfficials(info.label);
     } else if (officialsContent) {
       officialsContent.innerHTML = "";
+      officialsContent.hidden = true;
     }
 
     focused = true;
@@ -197,6 +204,10 @@
     mapOverlay.style.pointerEvents = "";
     backBtn.hidden = true;
     statsSection.hidden = true;
+    if (officialsContent) {
+      officialsContent.hidden = true;
+      officialsContent.innerHTML = "";
+    }
     focused = false;
     mapWrap.classList.remove("focused");
   }
