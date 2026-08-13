@@ -28,7 +28,8 @@
     <div class="toolbar-stats" aria-live="polite">
       <span id="stat-total">&mdash;</span> citizens tracked &middot;
       <span id="stat-shown">&mdash;</span> currently shown &middot;
-      updated <span id="stat-updated">&mdash;</span>
+      updated <span id="stat-updated">&mdash;</span> &middot;
+      sorting by: <span id="stat-sorting">Name</span>
     </div>
   </div>
 
@@ -53,6 +54,19 @@
 
   <div class="pagination" id="pagination"></div>
 </main>
+
+<div class="rank-overlay" id="rank-overlay" hidden>
+  <div class="rank-panel" id="rank-panel" role="dialog" aria-modal="true">
+    <button class="detail-close" id="rank-close" aria-label="Close">&times;</button>
+    <h2 id="rank-title">Rank order</h2>
+    <p class="rank-hint">Use the arrows to set highest → lowest sort order.</p>
+    <ol class="rank-list" id="rank-list"></ol>
+    <div class="rank-actions">
+      <button class="rank-apply-btn" id="rank-apply">Apply sort</button>
+      <button class="rank-cancel-btn" id="rank-cancel">Cancel</button>
+    </div>
+  </div>
+</div>
 
 <footer>
   <p>The Tosche Registry &middot; maintained by decree of the Crown</p>

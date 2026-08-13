@@ -1,19 +1,4 @@
-// EDIT THIS: map each traced region to its real name. The keys (region-1, etc.)
-// match the SVG polygon ids in claims.html — leave those alone, just change
-// the "label" and "type" values here to match reality.
-//
-// type: "citystate" links through to the Citizens registry pre-filtered by
-// that City-State. type: "territory" and type: "landmark" just show a label
-// for now since there's no backing data for them yet.
-const CLAIM_REGIONS = {
-  "region-1-north": { label: "Crari", type: "citystate" },
-  "region-2-outpost": { label: "Crari Bank", type: "territory" },
-  "region-3-west": { label: "Arkanos", type: "citystate" },
-  "region-4-southcenter": { label: "Arkavion", type: "citystate" },
-  "region-5-east": { label: "Floodkeep", type: "citystate" },
-  "region-6-obelisk": { label: "Pichia", type: "citystate" },
-};
-
+// Depends on claims-config.js being loaded first (defines CLAIM_REGIONS).
 (function () {
   "use strict";
 
@@ -24,7 +9,7 @@ const CLAIM_REGIONS = {
     const info = CLAIM_REGIONS[id];
     if (!info) return;
 
-    el.addEventListener("mouseenter", (e) => {
+    el.addEventListener("mouseenter", () => {
       if (tooltip) {
         tooltip.textContent = info.label;
         tooltip.hidden = false;
@@ -44,10 +29,7 @@ const CLAIM_REGIONS = {
     });
 
     el.addEventListener("click", () => {
-      if (info.type === "citystate") {
-        window.location.href = `index.html?citystate=${encodeURIComponent(info.label)}`;
-      }
-      // territory / landmark: no destination page yet, click does nothing for now
+      window.location.href = `claim.html?region=${encodeURIComponent(id)}`;
     });
 
     el.setAttribute("tabindex", "0");

@@ -47,14 +47,22 @@
     statTotal: document.getElementById("stat-total"),
     statShown: document.getElementById("stat-shown"),
     statUpdated: document.getElementById("stat-updated"),
+    statSorting: document.getElementById("stat-sorting"),
     pagination: document.getElementById("pagination"),
+    rankOverlay: document.getElementById("rank-overlay"),
+    rankPanel: document.getElementById("rank-panel"),
+    rankTitle: document.getElementById("rank-title"),
+    rankList: document.getElementById("rank-list"),
+    rankApply: document.getElementById("rank-apply"),
+    rankCancel: document.getElementById("rank-cancel"),
+    rankClose: document.getElementById("rank-close"),
   };
 
   let citizens = [];
   let currentPage = 1;
   const PAGE_SIZE = 25;
-  let sortKey = "name";
-  let sortAsc = true;
+  let sortKey = "name"; // "name" | "citystate" | "timezone" | "citizenship" | "other"
+  let rankOrder = []; // current active custom rank order (array of role names, highest first), only meaningful when sortKey isn't "name"
 
   // Per-column filter state: Set of accepted values, or null meaning "everything, no filter yet built"
   const filters = {
@@ -151,6 +159,9 @@
       filters[key] = new Set(); // opt-in: nothing selected = no restriction on this column
     }
 
+    const headerWrap = document.createElement("div");
+    headerWrap.className = "col-header-wrap";
+
     const wrap = document.createElement("div");
     wrap.className = "col-dropdown";
 
@@ -162,25 +173,6 @@
     const menu = document.createElement("div");
     menu.className = "col-dropdown-menu";
     menu.hidden = true;
-
-    const sortRow = document.createElement("div");
-    sortRow.className = "dropdown-sort-row";
-    sortRow.innerHTML = `
-      <span class="dropdown-sort-label">Sort by this column</span>
-      <div class="dropdown-sort-buttons">
-        <button type="button" class="dropdown-sort-btn" data-key="${key}" data-dir="asc" title="Sort A→Z">A&rarr;Z</button>
-        <button type="button" class="dropdown-sort-btn" data-key="${key}" data-dir="desc" title="Sort Z→A">Z&rarr;A</button>
-      </div>
-    `;
-    sortRow.querySelectorAll(".dropdown-sort-btn").forEach((btn) => {
-      btn.addEventListener("click", () => {
-        sortKey = btn.dataset.key;
-        sortAsc = btn.dataset.dir === "asc";
-        updateSortButtonStates();
-        applyFilters(false);
-      });
-    });
-    menu.appendChild(sortRow);
 
     if (options.length === 0) {
       const empty = document.createElement("p");
@@ -216,8 +208,21 @@
 
     wrap.appendChild(btn);
     wrap.appendChild(menu);
+
+    const rankBtn = document.createElement("button");
+    rankBtn.type = "button";
+    rankBtn.className = "col-rank-btn";
+    rankBtn.title = `Rank ${COLUMN_LABELS[key]} for sorting`;
+    rankBtn.innerHTML = "&#8645;";
+    rankBtn.addEventListener("click", (e) => {
+      e.stopPropagation();
+      openRankOverlay(key);
+    });
+
+    headerWrap.appendChild(wrap);
+    headerWrap.appendChild(rankBtn);
     th.innerHTML = "";
-    th.appendChild(wrap);
+    th.appendChild(headerWrap);
   }
 
   document.addEventListener("click", () => {
@@ -225,9 +230,85 @@
   });
 
   function updateSortButtonStates() {
-    document.querySelectorAll(".dropdown-sort-btn").forEach((btn) => {
-      const isActive = btn.dataset.key === sortKey && (btn.dataset.dir === "asc") === sortAsc;
-      btn.classList.toggle("active", isActive);
+    // no-op placeholder kept for callers; rank buttons don't need per-column active styling
+  }
+
+  // ------------------------------------------------------------------
+  // Rank-order sort overlay
+  // ------------------------------------------------------------------
+
+  let rankDraftKey = null;
+  let rankDraftOrder = [];
+
+  function openRankOverlay(key) {
+    rankDraftKey = key;
+    const options = optionsForColumn(key);
+    // start from the currently-active order for this column if it was the last one ranked,
+    // otherwise default to the natural (alphabetical) option order
+    rankDraftOrder = sortKey === key && rankOrder.length ? rankOrder.slice() : options.slice();
+    // include any options not yet present (new roles since last ranking)
+    options.forEach((opt) => {
+      if (!rankDraftOrder.includes(opt)) rankDraftOrder.push(opt);
+    });
+    // drop any stale entries no longer present
+    rankDraftOrder = rankDraftOrder.filter((opt) => options.includes(opt));
+
+    els.rankTitle.textContent = `Rank ${COLUMN_LABELS[key]}`;
+    renderRankList();
+    els.rankOverlay.hidden = false;
+  }
+
+  function renderRankList() {
+    if (rankDraftOrder.length === 0) {
+      els.rankList.innerHTML = `<p class="detail-empty">No values to rank in this column.</p>`;
+      return;
+    }
+    els.rankList.innerHTML = rankDraftOrder
+      .map(
+        (opt, i) => `
+      <li class="rank-item" data-index="${i}">
+        <span class="rank-position">${i + 1}</span>
+        <span class="rank-name">${escapeHtml(opt)}</span>
+        <span class="rank-controls">
+          <button type="button" class="rank-move" data-dir="up" data-index="${i}" ${i === 0 ? "disabled" : ""} title="Move up">&#9650;</button>
+          <button type="button" class="rank-move" data-dir="down" data-index="${i}" ${i === rankDraftOrder.length - 1 ? "disabled" : ""} title="Move down">&#9660;</button>
+        </span>
+      </li>`
+      )
+      .join("");
+
+    els.rankList.querySelectorAll(".rank-move").forEach((btn) => {
+      btn.addEventListener("click", () => {
+        const i = Number(btn.dataset.index);
+        const dir = btn.dataset.dir;
+        const j = dir === "up" ? i - 1 : i + 1;
+        if (j < 0 || j >= rankDraftOrder.length) return;
+        [rankDraftOrder[i], rankDraftOrder[j]] = [rankDraftOrder[j], rankDraftOrder[i]];
+        renderRankList();
+      });
+    });
+  }
+
+  function closeRankOverlay() {
+    els.rankOverlay.hidden = true;
+    rankDraftKey = null;
+  }
+
+  if (els.rankApply) {
+    els.rankApply.addEventListener("click", () => {
+      if (!rankDraftKey) return;
+      sortKey = rankDraftKey;
+      rankOrder = rankDraftOrder.slice();
+      if (els.statSorting) els.statSorting.textContent = COLUMN_LABELS[sortKey];
+      closeRankOverlay();
+      applyFilters(false);
+    });
+  }
+  if (els.rankCancel) els.rankCancel.addEventListener("click", closeRankOverlay);
+  if (els.rankClose) els.rankClose.addEventListener("click", closeRankOverlay);
+  if (els.rankOverlay) {
+    els.rankOverlay.addEventListener("click", (e) => {
+      if (e.target === els.rankOverlay) closeRankOverlay();
     });
   }
 
@@ -316,19 +397,24 @@
     const roleColumnKeys = ["citystate", "timezone", "citizenship", "other"];
 
     sorted.sort((a, b) => {
-      let cmp = 0;
       if (sortKey === "name") {
-        cmp = displayName(a).toLowerCase().localeCompare(displayName(b).toLowerCase());
-      } else if (roleColumnKeys.includes(sortKey)) {
-        const av = valuesForCitizenColumn(a, sortKey).slice().sort()[0] || "";
-        const bv = valuesForCitizenColumn(b, sortKey).slice().sort()[0] || "";
-        // citizens with nothing in this column always sort to the end, regardless of direction
-        if (!av && bv) return 1;
-        if (av && !bv) return -1;
-        if (!av && !bv) return 0;
-        cmp = av.toLowerCase().localeCompare(bv.toLowerCase());
+        return displayName(a).toLowerCase().localeCompare(displayName(b).toLowerCase());
       }
-      return sortAsc ? cmp : -cmp;
+      if (roleColumnKeys.includes(sortKey)) {
+        const aValues = valuesForCitizenColumn(a, sortKey);
+        const bValues = valuesForCitizenColumn(b, sortKey);
+        const aRank = Math.min(
+          ...aValues.map((v) => (rankOrder.includes(v) ? rankOrder.indexOf(v) : Infinity)),
+          Infinity
+        );
+        const bRank = Math.min(
+          ...bValues.map((v) => (rankOrder.includes(v) ? rankOrder.indexOf(v) : Infinity)),
+          Infinity
+        );
+        if (aRank === bRank) return displayName(a).toLowerCase().localeCompare(displayName(b).toLowerCase());
+        return aRank - bRank;
+      }
+      return 0;
     });
     return sorted;
   }
