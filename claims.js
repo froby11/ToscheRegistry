@@ -6,9 +6,8 @@
   const GUILD_ID = window.TOSCHE_CONFIG && TOSCHE_CONFIG.GUILD_ID;
 
   const tooltip = document.getElementById("map-tooltip");
-  const mapImage = document.getElementById("map-image");
+  const mapStage = document.getElementById("map-stage");
   const mapOverlay = document.getElementById("map-overlay");
-  const mapClip = document.getElementById("map-clip");
   const mapWrap = document.getElementById("map-wrap");
   const backBtn = document.getElementById("map-back-btn");
   const statsSection = document.getElementById("claim-stats-inline");
@@ -73,22 +72,28 @@
 
   function applyTransform() {
     const t = `translate(${baseDx + panX}px, ${baseDy + panY}px) scale(${scale})`;
-    mapImage.style.transform = t;
-    mapOverlay.style.transform = t;
+    console.log("[claims] applyTransform:", t, "mapStage found:", !!mapStage);
+    mapStage.style.transform = t;
   }
 
   function focusClaim(id) {
     const info = CLAIM_REGIONS[id];
     const geo = CLAIM_GEOMETRY[id];
-    if (!info || !geo) return;
+    console.log("[claims] focusClaim called for", id, "info:", info, "geo:", !!geo);
+    if (!info || !geo) {
+      console.warn("[claims] missing info or geo for", id, "- aborting");
+      return;
+    }
 
     const rect = mapWrap.getBoundingClientRect();
+    console.log("[claims] mapWrap rect:", rect.width, rect.height);
     const cxPct = (geo.bbox.xMinPct + geo.bbox.xMaxPct) / 2;
     const cyPct = (geo.bbox.yMinPct + geo.bbox.yMaxPct) / 2;
     const spanX = geo.bbox.xMaxPct - geo.bbox.xMinPct;
     const spanY = geo.bbox.yMaxPct - geo.bbox.yMinPct;
     const span = Math.max(spanX, spanY);
     scale = Math.min(6, Math.max(1.6, 80 / span));
+    console.log("[claims] cxPct", cxPct, "cyPct", cyPct, "span", span, "scale", scale);
 
     const regionCenterX = (cxPct / 100) * rect.width;
     const regionCenterY = (cyPct / 100) * rect.height;
@@ -101,6 +106,7 @@
     baseDy = containerCenterY - regionCenterY * scale;
     panX = 0;
     panY = 0;
+    console.log("[claims] baseDx", baseDx, "baseDy", baseDy);
 
     applyTransform();
 
@@ -127,8 +133,7 @@
     baseDy = 0;
     panX = 0;
     panY = 0;
-    mapImage.style.transform = "";
-    mapOverlay.style.transform = "";
+    mapStage.style.transform = "";
     document.querySelectorAll(".claim-region").forEach((el) => el.classList.remove("selected-claim"));
     mapOverlay.classList.remove("focus-mode");
     mapOverlay.style.pointerEvents = "";
@@ -182,6 +187,7 @@
     dragStartY = e.clientY;
     panStartX = panX;
     panStartY = panY;
+    mapStage.classList.add("no-transition");
     mapWrap.classList.add("panning");
   });
 
@@ -198,6 +204,7 @@
   window.addEventListener("mouseup", () => {
     if (dragging && dragMoved > 5) suppressNextClick = true;
     dragging = false;
+    mapStage.classList.remove("no-transition");
     mapWrap.classList.remove("panning");
   });
 
