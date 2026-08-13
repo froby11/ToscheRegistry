@@ -44,8 +44,6 @@
     body: document.getElementById("ledger-body"),
     status: document.getElementById("registry-status"),
     search: document.getElementById("search-input"),
-    sortSelect: document.getElementById("sort-select"),
-    sortDirBtn: document.getElementById("sort-direction"),
     statTotal: document.getElementById("stat-total"),
     statShown: document.getElementById("stat-shown"),
     statUpdated: document.getElementById("stat-updated"),
@@ -165,8 +163,30 @@
     menu.className = "col-dropdown-menu";
     menu.hidden = true;
 
+    const sortRow = document.createElement("div");
+    sortRow.className = "dropdown-sort-row";
+    sortRow.innerHTML = `
+      <span class="dropdown-sort-label">Sort by this column</span>
+      <div class="dropdown-sort-buttons">
+        <button type="button" class="dropdown-sort-btn" data-key="${key}" data-dir="asc" title="Sort A→Z">A&rarr;Z</button>
+        <button type="button" class="dropdown-sort-btn" data-key="${key}" data-dir="desc" title="Sort Z→A">Z&rarr;A</button>
+      </div>
+    `;
+    sortRow.querySelectorAll(".dropdown-sort-btn").forEach((btn) => {
+      btn.addEventListener("click", () => {
+        sortKey = btn.dataset.key;
+        sortAsc = btn.dataset.dir === "asc";
+        updateSortButtonStates();
+        applyFilters(false);
+      });
+    });
+    menu.appendChild(sortRow);
+
     if (options.length === 0) {
-      menu.innerHTML = `<p class="dropdown-empty">No roles in this category.</p>`;
+      const empty = document.createElement("p");
+      empty.className = "dropdown-empty";
+      empty.textContent = "No roles in this category.";
+      menu.appendChild(empty);
     } else {
       options.forEach((opt) => {
         const id = `filter-${key}-${opt.replace(/\W+/g, "-")}`;
@@ -203,6 +223,13 @@
   document.addEventListener("click", () => {
     document.querySelectorAll(".col-dropdown-menu").forEach((m) => (m.hidden = true));
   });
+
+  function updateSortButtonStates() {
+    document.querySelectorAll(".dropdown-sort-btn").forEach((btn) => {
+      const isActive = btn.dataset.key === sortKey && (btn.dataset.dir === "asc") === sortAsc;
+      btn.classList.toggle("active", isActive);
+    });
+  }
 
   function citizenPassesFilters(citizen) {
     for (const key of Object.keys(filters)) {
@@ -286,14 +313,20 @@
 
   function sortCitizens(list) {
     const sorted = list.slice();
+    const roleColumnKeys = ["citystate", "timezone", "citizenship", "other"];
+
     sorted.sort((a, b) => {
       let cmp = 0;
       if (sortKey === "name") {
         cmp = displayName(a).toLowerCase().localeCompare(displayName(b).toLowerCase());
-      } else if (sortKey === "activity") {
-        cmp = (a.activity_30d_minutes || 0) - (b.activity_30d_minutes || 0);
-      } else if (sortKey === "updated") {
-        cmp = (a.updated_at || "").localeCompare(b.updated_at || "");
+      } else if (roleColumnKeys.includes(sortKey)) {
+        const av = valuesForCitizenColumn(a, sortKey).slice().sort()[0] || "";
+        const bv = valuesForCitizenColumn(b, sortKey).slice().sort()[0] || "";
+        // citizens with nothing in this column always sort to the end, regardless of direction
+        if (!av && bv) return 1;
+        if (av && !bv) return -1;
+        if (!av && !bv) return 0;
+        cmp = av.toLowerCase().localeCompare(bv.toLowerCase());
       }
       return sortAsc ? cmp : -cmp;
     });
@@ -336,19 +369,6 @@
   }
 
   if (els.search) els.search.addEventListener("input", applyFilters);
-  if (els.sortSelect) {
-    els.sortSelect.addEventListener("change", (e) => {
-      sortKey = e.target.value;
-      applyFilters(false);
-    });
-  }
-  if (els.sortDirBtn) {
-    els.sortDirBtn.addEventListener("click", () => {
-      sortAsc = !sortAsc;
-      els.sortDirBtn.innerHTML = sortAsc ? "&#9650;" : "&#9660;";
-      applyFilters(false);
-    });
-  }
 
   async function init() {
     if (!GUILD_ID || GUILD_ID === "YOUR_GUILD_ID_HERE") {
@@ -364,6 +384,7 @@
       citizens = await res.json();
 
       ["citystate", "timezone", "citizenship", "other"].forEach(buildColumnHeader);
+      updateSortButtonStates();
 
       // Pre-apply a filter if arriving from a map region link, e.g. index.html?citystate=Crari
       const params = new URLSearchParams(window.location.search);

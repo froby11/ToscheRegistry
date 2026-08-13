@@ -6,12 +6,12 @@
 // that City-State. type: "territory" and type: "landmark" just show a label
 // for now since there's no backing data for them yet.
 const CLAIM_REGIONS = {
-  "region-1-north": { label: "North Claim", type: "citystate" },
+  "region-1-north": { label: "Crari", type: "citystate" },
   "region-2-outpost": { label: "Crari Bank", type: "territory" },
-  "region-3-west": { label: "West Claim", type: "citystate" },
-  "region-4-southcenter": { label: "South-Center Claim", type: "citystate" },
-  "region-5-east": { label: "East Claim", type: "citystate" },
-  "region-6-obelisk": { label: "Obelisk Claim", type: "landmark" },
+  "region-3-west": { label: "Arkanos", type: "citystate" },
+  "region-4-southcenter": { label: "Arkavion", type: "citystate" },
+  "region-5-east": { label: "Floodkeep", type: "citystate" },
+  "region-6-obelisk": { label: "Pichia", type: "citystate" },
 };
 
 (function () {
