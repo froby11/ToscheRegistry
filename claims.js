@@ -2,7 +2,13 @@
 (function () {
   "use strict";
 
-  console.log("[claims.js] VERSION MARKER: officials-fix-2026-08-13-2");
+  console.log("[claims.js] VERSION MARKER: officials-fix-2026-08-13-3");
+  console.log("[claims.js] typeof TOSCHE_CONFIG at top of script:", typeof TOSCHE_CONFIG);
+  try {
+    console.log("[claims.js] TOSCHE_CONFIG raw value:", TOSCHE_CONFIG);
+  } catch (e) {
+    console.log("[claims.js] Accessing TOSCHE_CONFIG threw:", e.message);
+  }
 
   const API_BASE = (typeof TOSCHE_CONFIG !== "undefined" && TOSCHE_CONFIG.API_BASE || "").replace(/\/$/, "");
   const GUILD_ID = typeof TOSCHE_CONFIG !== "undefined" ? TOSCHE_CONFIG.GUILD_ID : undefined;
@@ -39,6 +45,9 @@
     );
   }
 
+  const CITIZEN_ROLE_ID = "1444736850639196305";
+  const TRIAL_CITIZEN_ROLE_ID = "1444759694366212218";
+
   function computeStats(label) {
     const members = citizensForLabel(label);
     const activities = members.map((c) => c.activity_30d_minutes || 0).sort((a, b) => a - b);
@@ -49,7 +58,15 @@
         ? (activities[mid - 1] + activities[mid]) / 2
         : activities[mid]
       : 0;
-    return { population: members.length, mean, median };
+
+    const fullCitizens = members.filter((c) =>
+      (c.roles || []).some((r) => String(r.id) === CITIZEN_ROLE_ID)
+    ).length;
+    const trialCitizens = members.filter((c) =>
+      (c.roles || []).some((r) => String(r.id) === TRIAL_CITIZEN_ROLE_ID)
+    ).length;
+
+    return { population: members.length, fullCitizens, trialCitizens, mean, median };
   }
 
   function formatMinutes(minutes) {
@@ -79,7 +96,7 @@
     const head = headUrl(o);
     const name = o.ign || o.discord_username || `Unknown (${o.discord_id})`;
     return `
-    <div class="official-card">
+    <a class="official-card" href="citizen.html?id=${encodeURIComponent(o.discord_id)}">
       ${head ? `<img class="official-head" src="${head}" alt="">` : `<div class="official-head portrait-placeholder"></div>`}
       <div class="official-info">
         <span class="citizen-name">${name}</span>
@@ -87,7 +104,7 @@
         <span class="official-activity">Activity (30d): ${o.activity_30d_minutes ? formatMinutes(o.activity_30d_minutes) : "&mdash;"}</span>
       </div>
       <span class="official-badge">${roleLabel}</span>
-    </div>`;
+    </a>`;
   }
 
   async function renderOfficials(label) {
@@ -185,6 +202,7 @@
     statsSection.hidden = false;
     statsTitle.textContent = `${info.label} — Stats`;
     renderStats(info.label);
+    renderBalanceChart();
     if (info.type === "citystate") {
       renderOfficials(info.label);
     } else if (officialsContent) {
@@ -216,6 +234,50 @@
     mapWrap.classList.remove("focused");
   }
 
+  function svgBarChart(bars, opts) {
+    opts = opts || {};
+    const width = opts.width || 260;
+    const height = opts.height || 140;
+    const padding = 28;
+    const maxVal = Math.max(...bars.map((b) => b.value), 1);
+    const barW = (width - padding * 2) / bars.length - 16;
+
+    const barsSvg = bars
+      .map((b, i) => {
+        const x = padding + i * ((width - padding * 2) / bars.length) + 8;
+        const barH = (b.value / maxVal) * (height - padding * 2 - 20);
+        const y = height - padding - barH;
+        const color = b.color || "#c9a227";
+        return `
+        <text x="${x + barW / 2}" y="${y - 8}" text-anchor="middle" class="bar-chart-value">${b.displayValue}</text>
+        <rect x="${x}" y="${y}" width="${barW}" height="${barH}" rx="3" fill="${color}" fill-opacity="0.85"></rect>
+        <text x="${x + barW / 2}" y="${height - padding + 16}" text-anchor="middle" class="bar-chart-label">${b.label}</text>
+      `;
+      })
+      .join("");
+
+    return `
+      <svg class="bar-chart" viewBox="0 0 ${width} ${height}" preserveAspectRatio="xMidYMid meet">
+        <line x1="${padding}" y1="${height - padding}" x2="${width - padding}" y2="${height - padding}" class="bar-chart-baseline" />
+        ${barsSvg}
+      </svg>
+    `;
+  }
+
+  function svgEmptyChart(message, opts) {
+    opts = opts || {};
+    const width = opts.width || 260;
+    const height = opts.height || 140;
+    const padding = 28;
+    return `
+      <svg class="bar-chart" viewBox="0 0 ${width} ${height}" preserveAspectRatio="xMidYMid meet">
+        <line x1="${padding}" y1="${height - padding}" x2="${width - padding}" y2="${height - padding}" class="bar-chart-baseline" />
+        <line x1="${padding}" y1="${height / 2}" x2="${width - padding}" y2="${height / 2}" class="bar-chart-empty-line" />
+        <text x="${width / 2}" y="${height / 2 - 12}" text-anchor="middle" class="bar-chart-empty-text">${message}</text>
+      </svg>
+    `;
+  }
+
   function renderStats(label) {
     if (!citizensLoaded) {
       popContent.innerHTML = `<p class="detail-empty">Loading...</p>`;
@@ -227,23 +289,27 @@
     popContent.innerHTML = `
       <p class="stat-big-number">${stats.population}</p>
       <p class="stat-caption">citizen${stats.population === 1 ? "" : "s"}</p>
+      ${svgBarChart(
+        [
+          { label: "Trial Citizen", value: stats.trialCitizens, displayValue: stats.trialCitizens, color: "#8a92a3" },
+          { label: "Citizen", value: stats.fullCitizens, displayValue: stats.fullCitizens, color: "#c9a227" },
+        ],
+        { height: 130 }
+      )}
     `;
 
-    const maxVal = Math.max(stats.mean, stats.median, 1);
-    activityContent.innerHTML = `
-      <div class="mini-bar-chart">
-        <div class="mini-bar-row">
-          <span class="mini-bar-label">Mean</span>
-          <div class="mini-bar-track"><div class="mini-bar-fill" style="width:${(stats.mean / maxVal) * 100}%"></div></div>
-          <span class="mini-bar-value">${formatMinutes(stats.mean)}</span>
-        </div>
-        <div class="mini-bar-row">
-          <span class="mini-bar-label">Median</span>
-          <div class="mini-bar-track"><div class="mini-bar-fill" style="width:${(stats.median / maxVal) * 100}%"></div></div>
-          <span class="mini-bar-value">${formatMinutes(stats.median)}</span>
-        </div>
-      </div>
-    `;
+    activityContent.innerHTML = svgBarChart(
+      [
+        { label: "Mean", value: stats.mean, displayValue: formatMinutes(stats.mean), color: "#c9a227" },
+        { label: "Median", value: stats.median, displayValue: formatMinutes(stats.median), color: "#8a92a3" },
+      ],
+      { width: 320, height: 150 }
+    );
+  }
+
+  function renderBalanceChart() {
+    const el = document.getElementById("stat-balance-content");
+    if (el) el.innerHTML = svgEmptyChart("No data source configured yet", { height: 130 });
   }
 
   backBtn.addEventListener("click", resetFocus);

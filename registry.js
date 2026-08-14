@@ -67,6 +67,7 @@
   const PAGE_SIZE = 25;
   let sortKey = "name"; // "name" | "activity" | "citystate" | "timezone" | "citizenship" | "other"
   let activitySortAsc = false; // activity defaults to highest-first when first activated
+  let nameSortAsc = true;
   let rankOrder = []; // current active custom rank order (array of role names, highest first), only meaningful when sortKey isn't "name"
 
   // Per-column filter state: { include: Set, exclude: Set }, or null meaning "not built yet"
@@ -476,7 +477,8 @@
 
     sorted.sort((a, b) => {
       if (sortKey === "name") {
-        return displayName(a).toLowerCase().localeCompare(displayName(b).toLowerCase());
+        const cmp = displayName(a).toLowerCase().localeCompare(displayName(b).toLowerCase());
+        return nameSortAsc ? cmp : -cmp;
       }
       if (sortKey === "activity") {
         const diff = (a.activity_30d_minutes || 0) - (b.activity_30d_minutes || 0);
@@ -512,13 +514,17 @@
     });
 
     // Sort indicator: whichever column is currently driving the sort gets a gold outline/icon.
-    // (The Activity icon manages its own gold "active" state directly in updateActivityIcon.)
     document.querySelectorAll(".col-rank-btn").forEach((b) => b.classList.remove("sort-active"));
 
     if (sortKey !== "name" && sortKey !== "activity") {
       const rankBtn = document.querySelector(`th[data-column="${sortKey}"] .col-rank-btn`);
       if (rankBtn) rankBtn.classList.add("sort-active");
     }
+
+    if (sortKey !== "activity" && activityToggleState !== "off") activityToggleState = "off";
+    const activityBtn = document.querySelector("#th-activity .activity-sort-icon");
+    if (activityBtn) updateActivityIcon(activityBtn);
+    updateNameIcon();
   }
 
   function applyFilters(resetPage) {
@@ -616,6 +622,56 @@
     th.appendChild(headerWrap);
   }
 
+  let nameIconBtn = null;
+
+  function updateNameIcon() {
+    if (!nameIconBtn) return;
+    const isActive = sortKey === "name";
+    nameIconBtn.classList.toggle("active", isActive);
+    if (isActive && !nameSortAsc) {
+      nameIconBtn.innerHTML = "&#9660;";
+      nameIconBtn.title = "Sorting: Z → A (click for A → Z)";
+    } else {
+      nameIconBtn.innerHTML = "&#9650;";
+      nameIconBtn.title = isActive ? "Sorting: A → Z (click for Z → A)" : "Sort by name";
+    }
+  }
+
+  function buildNameHeader() {
+    const th = document.getElementById("th-name");
+    if (!th) return;
+
+    const headerWrap = document.createElement("div");
+    headerWrap.className = "col-header-wrap";
+
+    const label = document.createElement("span");
+    label.className = "activity-label";
+    label.textContent = "Name";
+
+    nameIconBtn = document.createElement("button");
+    nameIconBtn.type = "button";
+    nameIconBtn.className = "activity-sort-icon";
+    updateNameIcon();
+
+    nameIconBtn.addEventListener("click", () => {
+      if (sortKey === "name") {
+        nameSortAsc = !nameSortAsc;
+      } else {
+        sortKey = "name";
+        nameSortAsc = true;
+      }
+      activityToggleState = "off";
+      if (els.statSorting) els.statSorting.textContent = "Name";
+      updateNameIcon();
+      applyFilters(false);
+    });
+
+    headerWrap.appendChild(label);
+    headerWrap.appendChild(nameIconBtn);
+    th.innerHTML = "";
+    th.appendChild(headerWrap);
+  }
+
   async function init() {
     if (!GUILD_ID || GUILD_ID === "YOUR_GUILD_ID_HERE") {
       showStatus("Set GUILD_ID in config.js to load the registry.", true);
@@ -631,6 +687,7 @@
 
       ["citystate", "timezone", "citizenship", "other"].forEach(buildColumnHeader);
       buildActivityHeader();
+      buildNameHeader();
       updateSortButtonStates();
 
       // Pre-apply a filter if arriving from a map region link, e.g. index.html?citystate=Crari
