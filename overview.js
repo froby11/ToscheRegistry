@@ -41,6 +41,15 @@
     );
   }
 
+  const CITIZEN_ROLE_ID = "1444736850639196305";
+  const TRIAL_CITIZEN_ROLE_ID = "1444759694366212218";
+
+  function citizenshipSplit(members) {
+    const citizenCount = members.filter((c) => (c.roles || []).some((r) => String(r.id) === CITIZEN_ROLE_ID)).length;
+    const trialCount = members.filter((c) => (c.roles || []).some((r) => String(r.id) === TRIAL_CITIZEN_ROLE_ID)).length;
+    return { citizenCount, trialCount };
+  }
+
   function escapeHtml(str) {
     const div = document.createElement("div");
     div.textContent = str == null ? "" : String(str);
@@ -65,6 +74,31 @@
       .join("");
   }
 
+  function renderPopulationBarChart(container, entries) {
+    const max = Math.max(...entries.map((e) => e.citizenCount + e.trialCount), 1);
+    container.innerHTML =
+      `<div class="line-chart-legend">
+        <span style="color:#c9a227">Citizen</span>
+        <span style="color:#8a92a3">Trial Citizen</span>
+      </div>` +
+      entries
+        .map((e) => {
+          const total = e.citizenCount + e.trialCount;
+          const citizenPct = (e.citizenCount / max) * 100;
+          const trialPct = (e.trialCount / max) * 100;
+          return `
+        <div class="overview-bar-row">
+          <span class="overview-bar-label">${escapeHtml(e.label)}</span>
+          <div class="overview-bar-track overview-bar-track-stacked">
+            <div class="overview-bar-fill" style="width:${citizenPct}%;background:#c9a227"></div>
+            <div class="overview-bar-fill" style="width:${trialPct}%;background:#8a92a3"></div>
+          </div>
+          <span class="overview-bar-value">${total}</span>
+        </div>`;
+        })
+        .join("");
+  }
+
   function renderLeaderboard(container, entries, formatValue) {
     container.innerHTML = entries
       .map(
@@ -72,7 +106,7 @@
       <li class="leaderboard-row">
         <span class="leaderboard-rank">${i + 1}</span>
         <span class="leaderboard-city" style="color:${CITY_COLORS[e.label] || "var(--gold)"}">${escapeHtml(e.label)}</span>
-        <span class="leaderboard-value">${formatValue(e.value)}</span>
+        <span class="leaderboard-value">${formatValue(e.value, e)}</span>
       </li>`
       )
       .join("");
@@ -215,10 +249,14 @@
     const cities = cityStates();
 
     const popEntries = cities
-      .map((label) => ({ label, value: citizensForCity(lastCitizens, label).length }))
+      .map((label) => {
+        const members = citizensForCity(lastCitizens, label);
+        const { citizenCount, trialCount } = citizenshipSplit(members);
+        return { label, citizenCount, trialCount, value: citizenCount + trialCount };
+      })
       .sort((a, b) => b.value - a.value);
-    renderBarChart(els.popChart, popEntries, (v) => String(v));
-    renderLeaderboard(els.popBoard, popEntries, (v) => `${v} citizen${v === 1 ? "" : "s"}`);
+    renderPopulationBarChart(els.popChart, popEntries);
+    renderLeaderboard(els.popBoard, popEntries, (v, e) => `${e.citizenCount} citizen${e.citizenCount === 1 ? "" : "s"}, ${e.trialCount} trial`);
 
     const activityEntries = cities
       .map((label) => {
@@ -275,10 +313,14 @@
       const cities = cityStates();
 
       const popEntries = cities
-        .map((label) => ({ label, value: citizensForCity(citizens, label).length }))
+        .map((label) => {
+          const members = citizensForCity(citizens, label);
+          const { citizenCount, trialCount } = citizenshipSplit(members);
+          return { label, citizenCount, trialCount, value: citizenCount + trialCount };
+        })
         .sort((a, b) => b.value - a.value);
-      renderBarChart(els.popChart, popEntries, (v) => String(v));
-      renderLeaderboard(els.popBoard, popEntries, (v) => `${v} citizen${v === 1 ? "" : "s"}`);
+      renderPopulationBarChart(els.popChart, popEntries);
+      renderLeaderboard(els.popBoard, popEntries, (v, e) => `${e.citizenCount} citizen${e.citizenCount === 1 ? "" : "s"}, ${e.trialCount} trial`);
 
       const activityEntries = cities
         .map((label) => {

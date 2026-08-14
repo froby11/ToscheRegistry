@@ -1428,6 +1428,15 @@ main {
   overflow: hidden;
 }
 
+.overview-bar-track-stacked {
+  display: flex;
+}
+
+.overview-bar-track-stacked .overview-bar-fill {
+  border-radius: 0;
+  flex-shrink: 0;
+}
+
 .overview-bar-fill {
   height: 100%;
   border-radius: 7px;
