@@ -210,7 +210,7 @@
       btn.textContent = "History";
     });
     renderStats(info.label);
-    renderBalanceChart();
+    renderBalanceChart(info.label);
     if (info.type === "citystate") {
       renderOfficials(info.label);
     } else if (officialsContent) {
@@ -315,9 +315,21 @@
     );
   }
 
-  function renderBalanceChart() {
+  async function renderBalanceChart(label) {
     const el = document.getElementById("stat-balance-content");
-    if (el) el.innerHTML = svgEmptyChart("No data source configured yet", { height: 130 });
+    el.innerHTML = `<p class="detail-empty">Loading...</p>`;
+    const data = await fetchJson(
+      `${API_BASE}/api/balance-history?guild_id=${encodeURIComponent(GUILD_ID)}&city_state=${encodeURIComponent(label)}`
+    );
+    if (!data || data.length === 0) {
+      el.innerHTML = svgEmptyChart("No data source configured yet", { height: 130 });
+      return;
+    }
+    const latest = data[data.length - 1];
+    el.innerHTML = `
+      <p class="stat-big-number">${latest.balance}</p>
+      <p class="stat-caption">as of ${shortDate(latest.recorded_at)}</p>
+    `;
   }
 
   // ------------------------------------------------------------------
@@ -467,7 +479,7 @@
     if (chartKey === "population") {
       chartMode.population === "history" ? renderPopulationHistory(currentLabel) : renderStats(currentLabel);
     } else if (chartKey === "balance") {
-      chartMode.balance === "history" ? renderBalanceHistory(currentLabel) : renderBalanceChart();
+      chartMode.balance === "history" ? renderBalanceHistory(currentLabel) : renderBalanceChart(currentLabel);
     } else if (chartKey === "activity") {
       chartMode.activity === "history" ? renderActivityHistory(currentLabel) : renderStats(currentLabel);
     }
