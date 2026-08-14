@@ -26,6 +26,7 @@
 
   let citizens = [];
   let citizensLoaded = false;
+  const balanceCache = {}; // label -> latest balance (number) or null if none logged
 
   async function loadCitizens() {
     if (!GUILD_ID || GUILD_ID === "YOUR_GUILD_ID_HERE" || !API_BASE) return;
@@ -37,6 +38,28 @@
     } catch (err) {
       console.error("Could not load citizens for claim stats:", err);
     }
+  }
+
+  async function loadAllBalances() {
+    if (!GUILD_ID || GUILD_ID === "YOUR_GUILD_ID_HERE" || !API_BASE) return;
+    const labels = Object.values(CLAIM_REGIONS).map((info) => info.label);
+    await Promise.all(
+      labels.map(async (label) => {
+        try {
+          const res = await fetch(
+            `${API_BASE}/api/balance-history?guild_id=${encodeURIComponent(GUILD_ID)}&city_state=${encodeURIComponent(label)}`
+          );
+          if (!res.ok) {
+            balanceCache[label] = null;
+            return;
+          }
+          const data = await res.json();
+          balanceCache[label] = data.length ? data[data.length - 1].balance : null;
+        } catch (err) {
+          balanceCache[label] = null;
+        }
+      })
+    );
   }
 
   function citizensForLabel(label) {
@@ -75,6 +98,11 @@
     const rem = m % 60;
     if (h === 0) return `${rem}m`;
     return `${h}h ${rem}m`;
+  }
+
+  function formatMoney(value) {
+    const n = Math.round(Number(value) || 0);
+    return `$${n.toLocaleString()}`;
   }
 
   function headUrl(citizen) {
@@ -327,7 +355,7 @@
     }
     const latest = data[data.length - 1];
     el.innerHTML = `
-      <p class="stat-big-number">${latest.balance}</p>
+      <p class="stat-big-number">${formatMoney(latest.balance)}</p>
       <p class="stat-caption">as of ${shortDate(latest.recorded_at)}</p>
     `;
   }
@@ -358,15 +386,18 @@
         const pts = s.points.map((p, i) => {
           const x = padding + (n > 1 ? (i / (n - 1)) * (width - padding * 2) : (width - padding * 2) / 2);
           const y = height - padding - (p.value / maxVal) * (height - padding * 2 - 10);
-          return `${x},${y}`;
+          return { x, y, value: p.value, xLabel: p.xLabel };
         });
         const dots = pts
-          .map((pt) => {
-            const [x, y] = pt.split(",");
-            return `<circle cx="${x}" cy="${y}" r="2.5" fill="${s.color}" />`;
-          })
+          .map(
+            (pt) =>
+              `<circle cx="${pt.x}" cy="${pt.y}" r="3" fill="${s.color}"><title>${s.label}, ${pt.xLabel}: ${
+                s.formatValue ? s.formatValue(pt.value) : pt.value
+              }</title></circle>`
+          )
           .join("");
-        return `<polyline points="${pts.join(" ")}" fill="none" stroke="${s.color}" stroke-width="2" />${dots}`;
+        const lineStr = pts.map((pt) => `${pt.x},${pt.y}`).join(" ");
+        return `<polyline points="${lineStr}" fill="none" stroke="${s.color}" stroke-width="2" />${dots}`;
       })
       .join("");
 
@@ -451,7 +482,14 @@
       return;
     }
     el.innerHTML = svgLineChart(
-      [{ label: "Balance", color: "#c9a227", points: data.map((d) => ({ xLabel: shortDate(d.recorded_at), value: d.balance || 0 })) }],
+      [
+        {
+          label: "Balance",
+          color: "#c9a227",
+          formatValue: formatMoney,
+          points: data.map((d) => ({ xLabel: shortDate(d.recorded_at), value: d.balance || 0 })),
+        },
+      ],
       { height: 130 }
     );
   }
@@ -541,11 +579,13 @@
 
     el.addEventListener("mouseenter", () => {
       if (focused || !tooltip) return;
+      const balanceText =
+        balanceCache[info.label] != null ? formatMoney(balanceCache[info.label]) : "&mdash;";
       if (citizensLoaded) {
         const stats = computeStats(info.label);
-        tooltip.innerHTML = `<strong>${info.label}</strong><br>Population: ${stats.population}<br>Balance: &mdash;`;
+        tooltip.innerHTML = `<strong>${info.label}</strong><br>Population: ${stats.population}<br>Balance: ${balanceText}`;
       } else {
-        tooltip.innerHTML = `<strong>${info.label}</strong><br>Population: loading&hellip;<br>Balance: &mdash;`;
+        tooltip.innerHTML = `<strong>${info.label}</strong><br>Population: loading&hellip;<br>Balance: ${balanceText}`;
       }
       tooltip.hidden = false;
     });
@@ -587,4 +627,5 @@
   });
 
   loadCitizens();
+  loadAllBalances();
 })();

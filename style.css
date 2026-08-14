@@ -1016,10 +1016,18 @@ main {
 
 .stat-block-header {
   display: flex;
+  flex-wrap: nowrap;
   align-items: center;
   justify-content: space-between;
   gap: 0.5rem;
   margin-bottom: 0.75rem;
+}
+
+.stat-block-header h2,
+.stat-block-header h3 {
+  margin: 0;
+  text-align: left;
+  min-width: 0;
 }
 
 .chart-toggle-btn {
@@ -1064,12 +1072,20 @@ main {
 
 .line-chart-legend {
   display: flex;
-  gap: 1rem;
+  flex-wrap: wrap;
+  gap: 0.6rem 1rem;
   justify-content: center;
   margin-top: 0.4rem;
   font-family: var(--font-mono);
   font-size: 0.68rem;
   color: var(--parchment-dim);
+}
+
+.pie-chart-total {
+  font-family: var(--font-display);
+  font-size: 20px;
+  font-weight: 600;
+  fill: var(--parchment);
 }
 
 .line-chart-legend span::before {
@@ -1147,17 +1163,20 @@ main {
   stroke-width: 2;
   stroke-opacity: 0.6;
   cursor: pointer;
+  outline: none;
   transform-box: fill-box;
   transform-origin: center;
   transition: fill-opacity 0.18s ease, stroke-opacity 0.18s ease, filter 0.18s ease, transform 0.18s ease;
 }
 
 .claim-region:hover,
+.claim-region:focus,
 .claim-region:focus-visible {
   fill-opacity: 0.58;
   stroke-opacity: 1;
   filter: brightness(1.25) drop-shadow(0 8px 14px rgba(0, 0, 0, 0.6));
   transform: scale(1.015);
+  outline: none;
   outline: none;
 }
 

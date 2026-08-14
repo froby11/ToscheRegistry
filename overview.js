@@ -8,9 +8,7 @@
   const els = {
     status: document.getElementById("overview-status"),
     popChart: document.getElementById("population-chart"),
-    popBoard: document.getElementById("population-leaderboard"),
     activityChart: document.getElementById("activity-chart"),
-    activityBoard: document.getElementById("activity-leaderboard"),
   };
 
   // Same palette used for each claim's highlight on the map, for visual consistency.
@@ -90,26 +88,13 @@
         <div class="overview-bar-row">
           <span class="overview-bar-label">${escapeHtml(e.label)}</span>
           <div class="overview-bar-track overview-bar-track-stacked">
-            <div class="overview-bar-fill" style="width:${citizenPct}%;background:#c9a227"></div>
-            <div class="overview-bar-fill" style="width:${trialPct}%;background:#8a92a3"></div>
+            <div class="overview-bar-fill" style="width:${citizenPct}%;background:#c9a227" title="${e.citizenCount} citizen${e.citizenCount === 1 ? "" : "s"} in ${escapeHtml(e.label)}"></div>
+            <div class="overview-bar-fill" style="width:${trialPct}%;background:#8a92a3" title="${e.trialCount} trial citizen${e.trialCount === 1 ? "" : "s"} in ${escapeHtml(e.label)}"></div>
           </div>
           <span class="overview-bar-value">${total}</span>
         </div>`;
         })
         .join("");
-  }
-
-  function renderLeaderboard(container, entries, formatValue) {
-    container.innerHTML = entries
-      .map(
-        (e, i) => `
-      <li class="leaderboard-row">
-        <span class="leaderboard-rank">${i + 1}</span>
-        <span class="leaderboard-city" style="color:${CITY_COLORS[e.label] || "var(--gold)"}">${escapeHtml(e.label)}</span>
-        <span class="leaderboard-value">${formatValue(e.value, e)}</span>
-      </li>`
-      )
-      .join("");
   }
 
   function formatMinutes(minutes) {
@@ -118,6 +103,11 @@
     const rem = m % 60;
     if (h === 0) return `${rem}m`;
     return `${h}h ${rem}m`;
+  }
+
+  function formatMoney(value) {
+    const n = Math.round(Number(value) || 0);
+    return `$${n.toLocaleString()}`;
   }
 
   function shortDate(iso) {
@@ -208,7 +198,6 @@
 
   async function renderPopulationHistory() {
     els.popChart.innerHTML = `<p class="detail-empty">Loading history&hellip;</p>`;
-    els.popBoard.innerHTML = "";
     const data = await fetchJson(`${API_BASE}/api/population-history?guild_id=${encodeURIComponent(GUILD_ID)}`);
     if (!data) {
       els.popChart.innerHTML = `<p class="detail-empty">Could not load history.</p>`;
@@ -228,7 +217,6 @@
 
   async function renderActivityHistory() {
     els.activityChart.innerHTML = `<p class="detail-empty">Loading history&hellip;</p>`;
-    els.activityBoard.innerHTML = "";
     const data = await fetchJson(`${API_BASE}/api/activity-history?guild_id=${encodeURIComponent(GUILD_ID)}`);
     if (!data || data.length === 0) {
       els.activityChart.innerHTML = `<p class="detail-empty">No history yet.</p>`;
@@ -240,9 +228,100 @@
     ]);
   }
 
-  function renderWealthHistory() {
+  function svgPieChart(entries, opts) {
+    opts = opts || {};
+    const size = opts.size || 220;
+    const cx = size / 2;
+    const cy = size / 2;
+    const r = size / 2 - 14;
+    const circumference = 2 * Math.PI * r;
+
+    const total = entries.reduce((s, e) => s + e.value, 0);
+    if (total <= 0) {
+      return svgEmptyChart("No data source configured yet", { width: size, height: size });
+    }
+
+    let cumulative = 0;
+    const slices = entries
+      .filter((e) => e.value > 0)
+      .map((e) => {
+        const sliceLen = (e.value / total) * circumference;
+        const offset = -cumulative;
+        cumulative += sliceLen;
+        return `
+        <circle cx="${cx}" cy="${cy}" r="${r}" fill="none" stroke="${e.color}" stroke-width="26"
+          stroke-dasharray="${sliceLen} ${circumference - sliceLen}" stroke-dashoffset="${offset}"
+          transform="rotate(-90 ${cx} ${cy})">
+          <title>${e.label}: ${formatMoney(e.value)}</title>
+        </circle>`;
+      })
+      .join("");
+
+    return `
+      <svg class="line-chart" viewBox="0 0 ${size} ${size}" preserveAspectRatio="xMidYMid meet">
+        ${slices}
+        <text x="${cx}" y="${cy - 4}" text-anchor="middle" class="pie-chart-total">${formatMoney(total)}</text>
+        <text x="${cx}" y="${cy + 14}" text-anchor="middle" class="line-chart-label">Total Wealth</text>
+      </svg>
+      <div class="line-chart-legend">
+        ${entries
+          .filter((e) => e.value > 0)
+          .map((e) => `<span style="color:${e.color}">${escapeHtml(e.label)}: ${formatMoney(e.value)}</span>`)
+          .join("")}
+      </div>
+    `;
+  }
+
+  async function renderWealthCurrent() {
     const el = document.getElementById("wealth-chart");
-    if (el) el.innerHTML = svgEmptyChart("No data source configured yet");
+    el.innerHTML = `<p class="detail-empty">Loading&hellip;</p>`;
+    const labels = Object.entries(CLAIM_REGIONS)
+      .filter(([, info]) => info.type === "citystate" || info.type === "territory")
+      .map(([, info]) => info.label);
+
+    const results = await Promise.all(
+      labels.map(async (label) => {
+        const data = await fetchJson(
+          `${API_BASE}/api/balance-history?guild_id=${encodeURIComponent(GUILD_ID)}&city_state=${encodeURIComponent(label)}`
+        );
+        const balance = data && data.length ? data[data.length - 1].balance : 0;
+        return { label, value: balance || 0, color: CITY_COLORS[label] || "var(--gold)" };
+      })
+    );
+
+    el.innerHTML = svgPieChart(results);
+  }
+
+  async function renderWealthHistory() {
+    const el = document.getElementById("wealth-chart");
+    el.innerHTML = `<p class="detail-empty">Loading history&hellip;</p>`;
+    const data = await fetchJson(`${API_BASE}/api/balance-history?guild_id=${encodeURIComponent(GUILD_ID)}`);
+    if (!data || data.length === 0) {
+      el.innerHTML = svgEmptyChart("No data source configured yet");
+      return;
+    }
+
+    // Carry-forward daily total: as each city's balance gets logged, it updates
+    // that city's "current known balance" going forward, and each day's total
+    // is the sum of the latest known balance per city up to that day.
+    const byDay = {};
+    data.forEach((row) => {
+      const day = (row.recorded_at || "").slice(0, 10);
+      if (!day) return;
+      (byDay[day] = byDay[day] || []).push(row);
+    });
+    const days = Object.keys(byDay).sort();
+    const latestByCity = {};
+    const points = [];
+    days.forEach((day) => {
+      byDay[day].forEach((row) => {
+        latestByCity[row.city_state] = row.balance;
+      });
+      const total = Object.values(latestByCity).reduce((s, v) => s + (v || 0), 0);
+      points.push({ xLabel: shortDate(day), value: total });
+    });
+
+    el.innerHTML = svgLineChart([{ label: "Total Wealth", color: "#c9a227", formatValue: formatMoney, points }]);
   }
 
   function renderCurrentView() {
@@ -256,7 +335,6 @@
       })
       .sort((a, b) => b.value - a.value);
     renderPopulationBarChart(els.popChart, popEntries);
-    renderLeaderboard(els.popBoard, popEntries, (v, e) => `${e.citizenCount} citizen${e.citizenCount === 1 ? "" : "s"}, ${e.trialCount} trial`);
 
     const activityEntries = cities
       .map((label) => {
@@ -266,7 +344,6 @@
       })
       .sort((a, b) => b.value - a.value);
     renderBarChart(els.activityChart, activityEntries, formatMinutes);
-    renderLeaderboard(els.activityBoard, activityEntries, formatMinutes);
   }
 
   function refreshChart(key) {
@@ -278,10 +355,7 @@
       else renderCurrentView();
     } else if (key === "wealth") {
       if (chartMode.wealth === "history") renderWealthHistory();
-      else {
-        const el = document.getElementById("wealth-chart");
-        if (el) el.innerHTML = `<p class="detail-empty">No data source configured yet.</p>`;
-      }
+      else renderWealthCurrent();
     }
   }
 
@@ -320,7 +394,6 @@
         })
         .sort((a, b) => b.value - a.value);
       renderPopulationBarChart(els.popChart, popEntries);
-      renderLeaderboard(els.popBoard, popEntries, (v, e) => `${e.citizenCount} citizen${e.citizenCount === 1 ? "" : "s"}, ${e.trialCount} trial`);
 
       const activityEntries = cities
         .map((label) => {
@@ -330,7 +403,8 @@
         })
         .sort((a, b) => b.value - a.value);
       renderBarChart(els.activityChart, activityEntries, formatMinutes);
-      renderLeaderboard(els.activityBoard, activityEntries, formatMinutes);
+
+      renderWealthCurrent();
     } catch (err) {
       console.error(err);
       showStatus(`Could not reach the registry API. ${err.message}`, true);
