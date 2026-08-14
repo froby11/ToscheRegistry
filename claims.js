@@ -201,6 +201,14 @@
     backBtn.hidden = false;
     statsSection.hidden = false;
     statsTitle.textContent = `${info.label} — Stats`;
+    currentLabel = info.label;
+    chartMode.population = "current";
+    chartMode.balance = "current";
+    chartMode.activity = "current";
+    document.querySelectorAll(".chart-toggle-btn").forEach((btn) => {
+      btn.classList.remove("active");
+      btn.textContent = "History";
+    });
     renderStats(info.label);
     renderBalanceChart();
     if (info.type === "citystate") {
@@ -311,6 +319,169 @@
     const el = document.getElementById("stat-balance-content");
     if (el) el.innerHTML = svgEmptyChart("No data source configured yet", { height: 130 });
   }
+
+  // ------------------------------------------------------------------
+  // Historical line charts
+  // ------------------------------------------------------------------
+
+  const chartMode = { population: "current", balance: "current", activity: "current" };
+  let currentLabel = null;
+
+  function svgLineChart(series, opts) {
+    opts = opts || {};
+    const width = opts.width || 300;
+    const height = opts.height || 150;
+    const padding = 30;
+
+    const allPoints = series.flatMap((s) => s.points);
+    if (allPoints.length === 0) {
+      return svgEmptyChart("No history yet", { width, height });
+    }
+
+    const maxVal = Math.max(...allPoints.map((p) => p.value), 1);
+    const n = series[0].points.length;
+
+    const linesSvg = series
+      .map((s) => {
+        const pts = s.points.map((p, i) => {
+          const x = padding + (n > 1 ? (i / (n - 1)) * (width - padding * 2) : (width - padding * 2) / 2);
+          const y = height - padding - (p.value / maxVal) * (height - padding * 2 - 10);
+          return `${x},${y}`;
+        });
+        const dots = pts
+          .map((pt) => {
+            const [x, y] = pt.split(",");
+            return `<circle cx="${x}" cy="${y}" r="2.5" fill="${s.color}" />`;
+          })
+          .join("");
+        return `<polyline points="${pts.join(" ")}" fill="none" stroke="${s.color}" stroke-width="2" />${dots}`;
+      })
+      .join("");
+
+    // sparse x-axis labels: first, middle, last
+    const labelIdxs = n <= 1 ? [0] : n === 2 ? [0, 1] : [0, Math.floor((n - 1) / 2), n - 1];
+    const xLabels = labelIdxs
+      .map((i) => {
+        const x = padding + (n > 1 ? (i / (n - 1)) * (width - padding * 2) : (width - padding * 2) / 2);
+        return `<text x="${x}" y="${height - 8}" text-anchor="middle" class="line-chart-label">${series[0].points[i].xLabel}</text>`;
+      })
+      .join("");
+
+    const legend =
+      series.length > 1
+        ? `<div class="line-chart-legend">${series
+            .map((s) => `<span style="color:${s.color}">${s.label}</span>`)
+            .join("")}</div>`
+        : "";
+
+    return `
+      <svg class="line-chart" viewBox="0 0 ${width} ${height}" preserveAspectRatio="xMidYMid meet">
+        <line x1="${padding}" y1="${height - padding}" x2="${width - padding}" y2="${height - padding}" class="line-chart-axis" />
+        ${linesSvg}
+        ${xLabels}
+      </svg>
+      ${legend}
+    `;
+  }
+
+  function shortDate(iso) {
+    if (!iso) return "";
+    const d = new Date(iso);
+    if (isNaN(d)) return iso.slice(5, 10);
+    return `${d.getMonth() + 1}/${d.getDate()}`;
+  }
+
+  async function fetchJson(url) {
+    try {
+      const res = await fetch(url);
+      if (!res.ok) return null;
+      return await res.json();
+    } catch (err) {
+      console.error("[claims.js] history fetch failed:", url, err);
+      return null;
+    }
+  }
+
+  async function renderPopulationHistory(label) {
+    popContent.innerHTML = `<p class="detail-empty">Loading history&hellip;</p>`;
+    const data = await fetchJson(
+      `${API_BASE}/api/population-history?guild_id=${encodeURIComponent(GUILD_ID)}&city_state=${encodeURIComponent(label)}`
+    );
+    if (!data) {
+      popContent.innerHTML = `<p class="detail-empty">Could not load history.</p>`;
+      return;
+    }
+    popContent.innerHTML = svgLineChart(
+      [
+        {
+          label: "Trial Citizen",
+          color: "#8a92a3",
+          points: data.map((d) => ({ xLabel: shortDate(d.recorded_at), value: d.trial_citizen_count || 0 })),
+        },
+        {
+          label: "Citizen",
+          color: "#c9a227",
+          points: data.map((d) => ({ xLabel: shortDate(d.recorded_at), value: d.citizen_count || 0 })),
+        },
+      ],
+      { height: 150 }
+    );
+  }
+
+  async function renderBalanceHistory(label) {
+    const el = document.getElementById("stat-balance-content");
+    el.innerHTML = `<p class="detail-empty">Loading history&hellip;</p>`;
+    const data = await fetchJson(
+      `${API_BASE}/api/balance-history?guild_id=${encodeURIComponent(GUILD_ID)}&city_state=${encodeURIComponent(label)}`
+    );
+    if (!data || data.length === 0) {
+      el.innerHTML = svgEmptyChart("No data source configured yet", { height: 130 });
+      return;
+    }
+    el.innerHTML = svgLineChart(
+      [{ label: "Balance", color: "#c9a227", points: data.map((d) => ({ xLabel: shortDate(d.recorded_at), value: d.balance || 0 })) }],
+      { height: 130 }
+    );
+  }
+
+  async function renderActivityHistory(label) {
+    activityContent.innerHTML = `<p class="detail-empty">Loading history&hellip;</p>`;
+    const data = await fetchJson(
+      `${API_BASE}/api/activity-history?guild_id=${encodeURIComponent(GUILD_ID)}&city_state=${encodeURIComponent(label)}`
+    );
+    if (!data || data.length === 0) {
+      activityContent.innerHTML = `<p class="detail-empty">No history yet.</p>`;
+      return;
+    }
+    activityContent.innerHTML = svgLineChart(
+      [
+        { label: "Mean", color: "#c9a227", points: data.map((d) => ({ xLabel: shortDate(d.date), value: d.mean || 0 })) },
+        { label: "Median", color: "#8a92a3", points: data.map((d) => ({ xLabel: shortDate(d.date), value: d.median || 0 })) },
+      ],
+      { width: 320, height: 150 }
+    );
+  }
+
+  function refreshChart(chartKey) {
+    if (!currentLabel) return;
+    if (chartKey === "population") {
+      chartMode.population === "history" ? renderPopulationHistory(currentLabel) : renderStats(currentLabel);
+    } else if (chartKey === "balance") {
+      chartMode.balance === "history" ? renderBalanceHistory(currentLabel) : renderBalanceChart();
+    } else if (chartKey === "activity") {
+      chartMode.activity === "history" ? renderActivityHistory(currentLabel) : renderStats(currentLabel);
+    }
+  }
+
+  document.querySelectorAll(".chart-toggle-btn").forEach((btn) => {
+    btn.addEventListener("click", () => {
+      const key = btn.dataset.chart;
+      chartMode[key] = chartMode[key] === "history" ? "current" : "history";
+      btn.classList.toggle("active", chartMode[key] === "history");
+      btn.textContent = chartMode[key] === "history" ? "Current" : "History";
+      refreshChart(key);
+    });
+  });
 
   backBtn.addEventListener("click", resetFocus);
 

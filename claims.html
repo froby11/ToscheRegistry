@@ -50,15 +50,24 @@
 
     <div class="claim-stats-grid">
       <div class="claim-stat-block">
-        <h3>Land Population</h3>
+        <div class="stat-block-header">
+          <h3>Land Population</h3>
+          <button type="button" class="chart-toggle-btn" data-chart="population">History</button>
+        </div>
         <div id="stat-population-content"></div>
       </div>
       <div class="claim-stat-block">
-        <h3>Land Balance</h3>
+        <div class="stat-block-header">
+          <h3>Land Balance</h3>
+          <button type="button" class="chart-toggle-btn" data-chart="balance">History</button>
+        </div>
         <div id="stat-balance-content"></div>
       </div>
       <div class="claim-stat-block claim-stat-block-wide">
-        <h3>Activity — Mean vs Median (30d)</h3>
+        <div class="stat-block-header">
+          <h3>Activity — Mean vs Median (30d)</h3>
+          <button type="button" class="chart-toggle-btn" data-chart="activity">History</button>
+        </div>
         <div id="stat-activity-content"></div>
       </div>
     </div>

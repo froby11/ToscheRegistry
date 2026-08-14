@@ -395,8 +395,10 @@
       if (!state) continue;
       const values = valuesForCitizenColumn(citizen, key);
 
+      // Exclude: citizen must have NONE of the excluded values (any match = fail)
       if (state.exclude.size > 0 && values.some((v) => state.exclude.has(v))) return false;
-      if (state.include.size > 0 && !values.some((v) => state.include.has(v))) return false;
+      // Include: citizen must have ALL included values (missing even one = fail)
+      if (state.include.size > 0 && ![...state.include].every((v) => values.includes(v))) return false;
     }
     return true;
   }

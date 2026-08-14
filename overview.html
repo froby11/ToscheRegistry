@@ -29,14 +29,20 @@
 
   <div class="overview-grid">
     <section class="overview-section">
-      <h2>Total Population</h2>
+      <div class="stat-block-header">
+        <h2>Total Population</h2>
+        <button type="button" class="chart-toggle-btn" data-chart="population">History</button>
+      </div>
       <div id="population-chart" class="overview-chart"></div>
       <ol id="population-leaderboard" class="overview-leaderboard"></ol>
     </section>
 
     <section class="overview-section">
-      <h2>Total Wealth</h2>
-      <div class="overview-chart">
+      <div class="stat-block-header">
+        <h2>Total Wealth</h2>
+        <button type="button" class="chart-toggle-btn" data-chart="wealth">History</button>
+      </div>
+      <div id="wealth-chart" class="overview-chart">
         <p class="detail-empty">No data source configured yet.</p>
       </div>
       <ol class="overview-leaderboard">
@@ -45,7 +51,10 @@
     </section>
 
     <section class="overview-section">
-      <h2>Total Activity (30d)</h2>
+      <div class="stat-block-header">
+        <h2>Total Activity (30d)</h2>
+        <button type="button" class="chart-toggle-btn" data-chart="activity">History</button>
+      </div>
       <div id="activity-chart" class="overview-chart"></div>
       <ol id="activity-leaderboard" class="overview-leaderboard"></ol>
     </section>
